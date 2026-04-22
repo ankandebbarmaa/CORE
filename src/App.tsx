@@ -14,11 +14,24 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [activeGender, setActiveGender] = useState<"all" | "men" | "women">("all");
   const [isCheckout, setIsCheckout] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showPromoPopup, setShowPromoPopup] = useState(false);
+
+  useEffect(() => {
+    const hasSeenPopup = sessionStorage.getItem("hasSeenPromo");
+    if (!hasSeenPopup) {
+      const timer = setTimeout(() => {
+        setShowPromoPopup(true);
+        sessionStorage.setItem("hasSeenPromo", "true");
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const filteredProducts = useMemo(() => {
     return PRODUCTS.filter(p => {
@@ -40,10 +53,12 @@ export default function App() {
       } else if (activeCategory === "Linen Shirt Man") {
         matchesCategory = p.name.toLowerCase().includes("linen");
       }
+
+      const matchesGender = activeGender === "all" ? true : (p.gender === activeGender);
       
-      return matchesSearch && matchesCategory;
+      return matchesSearch && matchesCategory && matchesGender;
     });
-  }, [searchQuery, activeCategory]);
+  }, [searchQuery, activeCategory, activeGender]);
 
   const recommendedProducts = useMemo(() => {
     if (!selectedProduct) return [];
@@ -81,7 +96,33 @@ export default function App() {
     }).filter(item => item.quantity > 0));
   };
 
-  const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+  // Buy 4 Get 1 Free logic: Cheapest items are free for every 5 items in cart
+  const calculateDiscounts = () => {
+    let discountAmount = 0;
+    const itemsList: Product[] = [];
+    cart.forEach(item => {
+      for(let i = 0; i < item.quantity; i++) itemsList.push(item);
+    });
+
+    // Sort by price ascending to free the cheapest ones
+    itemsList.sort((a, b) => a.price - b.price);
+    const freeItemsCount = Math.floor(itemsList.length / 5);
+    for(let i = 0; i < freeItemsCount; i++) {
+      discountAmount += itemsList[i].price;
+    }
+
+    // Additional 15% off if subtotal after BOGO is still > ₹10,000
+    if ((subtotal - discountAmount) > 10000) {
+      discountAmount += (subtotal - discountAmount) * 0.15;
+    }
+
+    return discountAmount;
+  };
+
+  const totalDiscount = calculateDiscounts();
+  const total = subtotal - totalDiscount;
 
   const heroImages = [
     "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=1920",
@@ -106,7 +147,7 @@ export default function App() {
   };
 
   // Determine if we should show the hero/marquee
-  const isDeepBrowsing = activeCategory !== "all" || searchQuery !== "";
+  const isDeepBrowsing = activeCategory !== "all" || searchQuery !== "" || activeGender !== "all";
 
   const Footer = () => (
     <footer className="bg-zinc-950 text-white p-12 md:p-32">
@@ -172,11 +213,21 @@ export default function App() {
             </div>
 
             <div className="lg:w-1/2 flex flex-col pt-4">
-              <div className="mb-10">
-                <h1 className="text-5xl font-black mb-4 uppercase tracking-tighter italic">{selectedProduct.name}</h1>
-                <p className="text-3xl font-black text-brand-accent mb-6 italic">{formatPrice(selectedProduct.price)}</p>
-                <p className="text-zinc-600 leading-relaxed mb-8">{selectedProduct.description}</p>
-              </div>
+                  <div className="mb-10">
+                    <h1 className="text-5xl font-black mb-4 uppercase tracking-tighter italic">{selectedProduct.name}</h1>
+                    <div className="flex items-center gap-4 mb-6">
+                      <p className="text-3xl font-black text-brand-accent italic">{formatPrice(selectedProduct.price)}</p>
+                      {selectedProduct.originalPrice && (
+                        <p className="text-xl font-bold text-zinc-300 line-through italic">{formatPrice(selectedProduct.originalPrice)}</p>
+                      )}
+                      {selectedProduct.originalPrice && (
+                        <span className="bg-brand-accent text-white px-2 py-1 text-[10px] font-black rounded-sm uppercase tracking-widest">
+                          {Math.round(((selectedProduct.originalPrice - selectedProduct.price) / selectedProduct.originalPrice) * 100)}% OFF
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-zinc-600 leading-relaxed mb-8">{selectedProduct.description}</p>
+                  </div>
 
               <div className="mb-8">
                 <h3 className="font-black mb-4 uppercase text-xs tracking-widest flex justify-between">
@@ -259,8 +310,10 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white">
       {/* Announcement Bar */}
-      <div className="bg-brand-accent text-white py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] relative z-[60]">
-        Buy ₹5,000 and get 20% off. • Free Genesis Transit Included
+      <div className="bg-zinc-950 text-white py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] relative z-[60] overflow-hidden">
+        <motion.div animate={{ x: [20, -20, 20] }} transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}>
+          PROTOCOL OFFER: BUY 4 GET 1 FREE + EXTRA 15% OFF ON ₹10,000+ • CODE: CORE15
+        </motion.div>
       </div>
 
       <header className="sticky top-0 z-50 bg-white border-b p-4 md:p-6 lg:px-12 flex justify-between items-center gap-4">
@@ -271,9 +324,15 @@ export default function App() {
           >
             <Menu size={20} />
           </button>
-          <h1 onClick={() => { setActiveCategory("all"); setSearchQuery(""); }} className="text-3xl md:text-4xl font-black italic cursor-pointer tracking-tighter">CORE</h1>
+          <h1 onClick={() => { setActiveCategory("all"); setActiveGender("all"); setSearchQuery(""); }} className="text-3xl md:text-4xl font-black italic cursor-pointer tracking-tighter">CORE</h1>
           <nav className="hidden lg:flex gap-8 font-black uppercase text-[11px] tracking-[0.2em] items-center">
-            {["all", "hoodies", "tees", "footwear"].map(cat => (
+            {["all", "men", "women"].map(gen => (
+              <button key={gen} onClick={() => setActiveGender(gen as any)} className={`transition-all ${activeGender === gen ? 'text-brand-accent scale-110' : 'text-zinc-500 hover:text-black'}`}>
+                {gen}
+              </button>
+            ))}
+            <div className="w-px h-4 bg-zinc-200 mx-2" />
+            {["hoodies", "tees", "footwear"].map(cat => (
               <button key={cat} onClick={() => setActiveCategory(cat)} className={`transition-all ${activeCategory === cat ? 'text-brand-accent' : 'text-zinc-500 hover:text-black'}`}>
                 {cat}
               </button>
@@ -327,7 +386,16 @@ export default function App() {
               </div>
               
               <div className="flex flex-col gap-6">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-300 mb-2">Sections</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-300 mb-2">GENDER</h3>
+                <div className="flex gap-4">
+                  {["men", "women"].map(gen => (
+                    <button key={gen} onClick={() => { setActiveGender(gen as any); setIsMobileMenuOpen(false); }} className={`flex-1 py-4 border-2 font-black uppercase italic text-sm rounded-xl ${activeGender === gen ? 'bg-black text-white border-black' : 'border-zinc-200'}`}>
+                      {gen}
+                    </button>
+                  ))}
+                </div>
+
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-300 mt-6 mb-2">Sections</h3>
                 {["all", "hoodies", "tees", "footwear"].map(cat => (
                   <button key={cat} onClick={() => { setActiveCategory(cat); setIsMobileMenuOpen(false); }} className={`text-left text-xl font-black uppercase italic ${activeCategory === cat ? 'text-brand-accent' : 'text-zinc-950'}`}>
                     {cat}
@@ -401,6 +469,63 @@ export default function App() {
                 </motion.div>
               </div>
             </section>
+
+            {/* Men/Women Split Section */}
+            <section className="py-12 px-6">
+              <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div 
+                  onClick={() => setActiveGender("men")}
+                  className="group relative h-[60vh] overflow-hidden rounded-3xl cursor-pointer border-4 border-black"
+                >
+                  <img 
+                    src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&q=80&w=800" 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    alt="Men Collection"
+                  />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex flex-col justify-end p-12">
+                    <h3 className="text-white text-6xl font-black italic tracking-tighter mb-4">MEN</h3>
+                    <p className="text-white/80 font-black uppercase text-xs tracking-widest flex items-center gap-2">
+                      EXPLORE CURATED STREETWEAR <ArrowRight size={16} />
+                    </p>
+                  </div>
+                </div>
+                <div 
+                  onClick={() => setActiveGender("women")}
+                  className="group relative h-[60vh] overflow-hidden rounded-3xl cursor-pointer border-4 border-black"
+                >
+                  <img 
+                    src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=800" 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    alt="Women Collection"
+                  />
+                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex flex-col justify-end p-12 text-right items-end">
+                    <h3 className="text-white text-6xl font-black italic tracking-tighter mb-4">WOMEN</h3>
+                    <p className="text-white/80 font-black uppercase text-xs tracking-widest flex items-center gap-2">
+                       <ArrowLeft size={16} /> NEW DROP NOW LIVE
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Sticky Discount Banner */}
+            <section className="bg-brand-accent p-12 lg:p-24 overflow-hidden relative border-y-4 border-black">
+              <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12 relative z-10">
+                <div className="text-white max-w-2xl">
+                  <h2 className="text-6xl md:text-8xl font-black italic tracking-tighter mb-8 leading-none">BUY 4 GET 1 FREE</h2>
+                  <p className="text-xl font-black uppercase tracking-[0.2em] mb-4">LIMITED PROTOCOL DEPLOYMENT</p>
+                  <p className="text-white/70 font-bold max-w-lg">Add any 5 items to your loadout and the cheapest one will be automatically deducted. Extra 15% off applied instantly on orders over ₹10,000.</p>
+                </div>
+                <div className="bg-white p-12 rounded-3xl border-4 border-black shadow-[20px_20px_0_rgba(0,0,0,1)] rotate-3 hover:rotate-0 transition-transform cursor-pointer">
+                  <p className="text-black font-black text-4xl mb-2 tracking-tighter italic whitespace-nowrap">CODE: CORE15</p>
+                  <div className="w-full h-1 bg-black/10 my-4" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Apply at checkout for extra savings</p>
+                </div>
+              </div>
+              <div className="absolute top-0 right-0 opacity-10 pointer-events-none -rotate-12 translate-x-20">
+                <h2 className="text-[20rem] font-black italic text-white leading-none">CORE</h2>
+              </div>
+            </section>
           </>
         ) : (
           /* Category/Search Header Header */
@@ -408,11 +533,11 @@ export default function App() {
             <div className="max-w-7xl mx-auto px-6">
               <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}>
                 <h2 className="text-5xl md:text-9xl font-black uppercase italic tracking-tighter leading-none mb-6 break-words">
-                  {searchQuery ? "Search Results" : activeCategory}
+                  {searchQuery ? "Search Results" : activeGender !== "all" ? activeGender : activeCategory}
                 </h2>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <button 
-                    onClick={() => { setActiveCategory("all"); setSearchQuery(""); window.scrollTo(0, 0); }}
+                    onClick={() => { setActiveCategory("all"); setActiveGender("all"); setSearchQuery(""); window.scrollTo(0, 0); }}
                     className="flex items-center gap-2 font-black text-[10px] hover:text-brand-accent transition-colors bg-white px-6 py-3 rounded-full border-2 border-black"
                   >
                     <ArrowLeft size={16} /> RESET VIEW
@@ -469,13 +594,18 @@ export default function App() {
                     <Heart size={16} className={wishlist.includes(product.id) ? "fill-brand-accent text-brand-accent" : "text-black/20"} />
                   </button>
                 </div>
-                <div className="flex flex-col md:flex-row justify-between items-start px-2 gap-1">
-                  <div className="flex flex-col gap-1 overflow-hidden">
-                    <h4 className="font-black text-[10px] md:text-[12px] uppercase tracking-tight group-hover:text-brand-accent transition-colors truncate leading-tight">{product.name}</h4>
-                    <p className="text-zinc-400 text-[8px] md:text-[9px] font-black uppercase tracking-widest">{product.category}</p>
-                  </div>
-                  <p className="font-black text-[10px] md:text-sm italic text-zinc-900 whitespace-nowrap">{formatPrice(product.price)}</p>
-                </div>
+                    <div className="flex flex-col md:flex-row justify-between items-start px-2 gap-1">
+                      <div className="flex flex-col gap-1 overflow-hidden">
+                        <h4 className="font-black text-[10px] md:text-[12px] uppercase tracking-tight group-hover:text-brand-accent transition-colors truncate leading-tight">{product.name}</h4>
+                        <p className="text-zinc-400 text-[8px] md:text-[9px] font-black uppercase tracking-widest">{product.category}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-[10px] md:text-sm italic text-zinc-900 whitespace-nowrap">{formatPrice(product.price)}</p>
+                        {product.originalPrice && (
+                          <p className="text-[8px] md:text-[10px] font-bold text-zinc-300 line-through italic leading-none">{formatPrice(product.originalPrice)}</p>
+                        )}
+                      </div>
+                    </div>
               </motion.div>
             ))}
           </div>
@@ -499,7 +629,78 @@ export default function App() {
       </main>
 
       <Footer />
-      <CartDrawer isCartOpen={isCartOpen} setIsCartOpen={setIsCartOpen} cart={cart} updateQuantity={updateQuantity} total={total} setIsCheckout={setIsCheckout} formatPrice={formatPrice} />
+      <CartDrawer 
+        isCartOpen={isCartOpen} 
+        setIsCartOpen={setIsCartOpen} 
+        cart={cart} 
+        updateQuantity={updateQuantity} 
+        subtotal={subtotal} 
+        totalDiscount={totalDiscount}
+        total={total} 
+        setIsCheckout={setIsCheckout} 
+        formatPrice={formatPrice} 
+      />
+
+      {/* Promotional Pop-up */}
+      <AnimatePresence>
+        {showPromoPopup && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setShowPromoPopup(false)} 
+              className="absolute inset-0 bg-black/80 backdrop-blur-md" 
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="bg-white w-full max-w-2xl relative rounded-3xl overflow-hidden border-8 border-black shadow-[30px_30px_0_rgba(0,0,0,1)]"
+            >
+              <button 
+                onClick={() => setShowPromoPopup(false)}
+                className="absolute top-6 right-6 p-2 bg-zinc-100 rounded-full hover:bg-black hover:text-white transition-all z-20"
+              >
+                <X size={20} />
+              </button>
+              
+              <div className="flex flex-col md:flex-row">
+                <div className="md:w-1/2 p-12 bg-brand-accent text-white flex flex-col justify-center">
+                  <h3 className="text-5xl font-black italic tracking-tighter mb-4 leading-none">UNLOCK SAVINGS</h3>
+                  <p className="font-black uppercase tracking-[0.2em] text-xs mb-8">Limited Protocol Access</p>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-brand-accent font-black text-xs italic">1</div>
+                      <p className="font-bold text-sm">Buy 4 Get 1 Free Today</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-brand-accent font-black text-xs italic">2</div>
+                      <p className="font-bold text-sm">Extra 15% OFF (Auto-Applied)</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-brand-accent font-black text-xs italic">3</div>
+                      <p className="font-bold text-sm">Free Express Transit</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="md:w-1/2 p-12 flex flex-col justify-center bg-white">
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-300 mb-4">Copy Promo Code</p>
+                  <div className="border-4 border-dashed border-zinc-200 p-6 rounded-2xl text-center mb-8 bg-zinc-50">
+                    <span className="text-3xl font-black italic tracking-tighter">CORE15</span>
+                  </div>
+                  <button 
+                    onClick={() => setShowPromoPopup(false)}
+                    className="bg-black text-white py-5 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-brand-accent transition-all active:scale-95"
+                  >
+                    CONTINUE SHOPPING
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       
       <AnimatePresence>
         {isCheckout && (
@@ -544,20 +745,31 @@ export default function App() {
                         </div>
                       ))}
                    </div>
-                   <div className="border-t-2 border-white/5 pt-12 space-y-4 mb-12">
-                      <div className="flex justify-between text-zinc-500 font-black text-[10px] tracking-widest uppercase">
-                        <span>Items Subtotal</span>
-                        <span>{formatPrice(total)}</span>
-                      </div>
-                      <div className="flex justify-between text-zinc-500 font-black text-[10px] tracking-widest uppercase">
-                        <span>Shipping</span>
-                        <span className="text-green-500">FREE</span>
-                      </div>
-                      <div className="flex justify-between text-6xl md:text-7xl font-black italic pt-12 tracking-tighter text-brand-accent">
-                        <span>TOTAL</span>
-                        <span>{formatPrice(total)}</span>
-                      </div>
-                   </div>
+                    <div className="border-t-2 border-white/5 pt-12 space-y-4 mb-12">
+                       <div className="flex justify-between text-zinc-500 font-black text-[10px] tracking-widest uppercase">
+                         <span>Items Subtotal</span>
+                         <span>{formatPrice(subtotal)}</span>
+                       </div>
+                       {totalDiscount > 0 && (
+                         <div className="flex justify-between text-brand-accent font-black text-[10px] tracking-widest uppercase">
+                           <span>Total Discounts Applied</span>
+                           <span>-{formatPrice(totalDiscount)}</span>
+                         </div>
+                       )}
+                       <div className="flex justify-between text-zinc-500 font-black text-[10px] tracking-widest uppercase">
+                         <span>Shipping</span>
+                         <span className="text-green-500">FREE</span>
+                       </div>
+                       <div className="flex justify-between text-6xl md:text-7xl font-black italic pt-12 tracking-tighter text-brand-accent">
+                         <span>TOTAL</span>
+                         <span>{formatPrice(total)}</span>
+                       </div>
+                       {totalDiscount > 0 && (
+                         <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] italic text-right mt-2 animate-pulse">
+                           SAVED {formatPrice(totalDiscount)} WITH EXCLUSIVE OFFERS
+                         </p>
+                       )}
+                    </div>
                    <button className="w-full bg-brand-accent text-white py-10 rounded-xl font-black uppercase text-sm tracking-widest transition-all hover:bg-white hover:text-black active:scale-95 shadow-2xl">PLACE ORDER</button>
                 </div>
               </div>
@@ -569,7 +781,7 @@ export default function App() {
   );
 }
 
-function CartDrawer({ isCartOpen, setIsCartOpen, cart, updateQuantity, total, setIsCheckout, formatPrice }: any) {
+function CartDrawer({ isCartOpen, setIsCartOpen, cart, updateQuantity, subtotal, totalDiscount, total, setIsCheckout, formatPrice }: any) {
   return (
     <AnimatePresence>
       {isCartOpen && (
@@ -581,52 +793,83 @@ function CartDrawer({ isCartOpen, setIsCartOpen, cart, updateQuantity, total, se
                 <h3 className="text-6xl font-black underline italic tracking-tighter leading-none">ORDER</h3>
                 <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-30 mt-2 italic decoration-brand-accent decoration-2 underline-offset-4">Cart Status Active</p>
               </div>
-              <button onClick={() => setIsCartOpen(false)} className="p-4 border-2 border-black rounded-full hover:rotate-90 transition-transform"><X size={28} /></button>
+              <button 
+                onClick={() => setIsCartOpen(false)}
+                className="p-4 bg-zinc-100 rounded-full hover:bg-black hover:text-white transition-all shadow-lg active:scale-90"
+              >
+                <X size={24} />
+              </button>
             </div>
-            
-            <div className="flex-grow overflow-y-auto space-y-12 pr-4 custom-scrollbar">
+
+            <div className="flex-grow overflow-y-auto pr-6 custom-scrollbar">
               {cart.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center opacity-10 italic">
-                  <ShoppingBag size={80} strokeWidth={1} className="mb-8" />
-                  <p className="font-black uppercase tracking-[0.5em] text-xl text-center leading-normal">Your cart is currently empty</p>
+                <div className="h-full flex flex-col items-center justify-center opacity-20 text-center scale-90">
+                  <ShoppingBag size={120} strokeWidth={0.5} />
+                  <p className="font-black uppercase tracking-[0.5em] mt-10">LOADOUT EMPTY</p>
+                  <p className="text-xs font-bold mt-2">NO SIGNALS DETECTED IN BAG</p>
                 </div>
               ) : (
-                cart.map((item: any) => (
-                  <div key={item.id} className="flex gap-8 border-b-2 border-black/5 pb-10 group items-center">
-                    <div className="w-32 h-40 bg-zinc-100 rounded-xl overflow-hidden border border-black/5 group-hover:shadow-2xl transition-all flex-shrink-0">
-                      <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                    </div>
-                    <div className="flex-grow flex flex-col justify-between h-32">
-                      <div>
-                        <div className="flex justify-between items-start mb-4">
-                          <h4 className="font-black text-xs uppercase tracking-tight group-hover:text-brand-accent transition-colors leading-none">{item.name}</h4>
-                          <button onClick={() => updateQuantity(item.id, -item.quantity)} className="text-zinc-200 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
-                        </div>
-                        <span className="text-zinc-400 font-black text-[9px] uppercase tracking-[0.3em]">{item.category}</span>
+                <div className="space-y-10">
+                  {cart.map((item: any) => (
+                    <div key={item.id} className="flex gap-8 group">
+                      <div className="w-32 aspect-[3/4] overflow-hidden rounded-xl border-2 border-zinc-100 group-hover:border-black transition-all flex-shrink-0">
+                        <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="font-black text-2xl italic tracking-tighter">${item.price}</span>
-                        <div className="flex items-center gap-6 border-2 border-black rounded-full px-6 py-2">
-                          <button onClick={() => updateQuantity(item.id, -1)} className="hover:text-brand-accent"><Minus size={14} /></button>
-                          <span className="font-black text-sm min-w-[20px] text-center">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, 1)} className="hover:text-brand-accent"><Plus size={14} /></button>
+                      <div className="flex-grow flex flex-col py-2">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-black text-lg uppercase tracking-tighter italic">{item.name}</h4>
+                          <button onClick={() => updateQuantity(item.id, -item.quantity)} className="text-zinc-300 hover:text-brand-accent"><Trash2 size={16} /></button>
+                        </div>
+                        <p className="font-black text-brand-accent italic mb-6">{formatPrice(item.price)}</p>
+                        
+                        <div className="flex items-center gap-6 mt-auto">
+                           <div className="flex items-center gap-5 bg-zinc-50 px-4 py-2 rounded-lg border">
+                              <button onClick={() => updateQuantity(item.id, -1)} className="hover:text-brand-accent"><Minus size={14} /></button>
+                              <span className="font-black text-sm w-4 text-center">{item.quantity}</span>
+                              <button onClick={() => updateQuantity(item.id, 1)} className="hover:text-brand-accent"><Plus size={14} /></button>
+                           </div>
+                           <p className="font-black text-xs uppercase tracking-widest text-zinc-300">Sum: {formatPrice(item.price * item.quantity)}</p>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
 
             {cart.length > 0 && (
-              <div className="mt-16 pt-16 border-t-4 border-black">
-                <div className="flex justify-between items-center mb-12">
-                  <span className="font-black text-zinc-400 uppercase tracking-widest text-[11px] underline decoration-brand-accent decoration-2 underline-offset-8">Order Subtotal</span>
-                  <span className="text-6xl font-black italic tracking-tighter text-brand-accent">{formatPrice(total)}</span>
-                </div>
-                <button onClick={() => { setIsCheckout(true); setIsCartOpen(false); }} className="w-full bg-black text-white py-10 rounded-xl font-black uppercase text-sm tracking-widest transition-all hover:bg-brand-accent shadow-2xl active:scale-95 flex items-center justify-center gap-4">
-                  PROCEED TO CHECKOUT <ArrowRight size={24} />
-                </button>
+              <div className="mt-16 border-t-4 border-black pt-12">
+                 <div className="space-y-4 mb-10">
+                    <div className="flex justify-between font-black uppercase text-[11px] tracking-widest opacity-40">
+                      <span>Sub-Loadout</span>
+                      <span>{formatPrice(subtotal)}</span>
+                    </div>
+                    {totalDiscount > 0 && (
+                      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex justify-between font-black uppercase text-[11px] tracking-widest text-brand-accent">
+                        <span>Protocol Savings (B4G1 + 15%)</span>
+                        <span className="animate-pulse">-{formatPrice(totalDiscount)}</span>
+                      </motion.div>
+                    )}
+                    <div className="flex justify-between font-black text-5xl md:text-7xl italic tracking-tighter text-black mt-4">
+                      <span>TOTAL</span>
+                      <span className={totalDiscount > 0 ? "text-brand-accent" : ""}>{formatPrice(total)}</span>
+                    </div>
+                 </div>
+                 
+                 <button 
+                  onClick={() => { setIsCartOpen(false); setIsCheckout(true); }}
+                  className="w-full bg-black text-white py-10 font-black uppercase text-sm tracking-[0.3em] hover:bg-brand-accent transition-all rounded-xl shadow-[20px_20px_0px_rgba(0,0,0,0.05)] active:scale-95 disabled:opacity-20 flex items-center justify-center gap-4 group"
+                 >
+                   PHASE TO CHECKOUT <ArrowRight size={20} className="group-hover:translate-x-2 transition-transform" />
+                 </button>
+                 
+                 <div className="mt-8 flex justify-center items-center gap-4 text-[9px] font-black uppercase tracking-widest text-zinc-300">
+                    <span>SSL SECURE</span>
+                    <div className="w-1 h-1 bg-zinc-200 rounded-full"/>
+                    <span>EXPRESS TRANSIT</span>
+                    <div className="w-1 h-1 bg-zinc-200 rounded-full"/>
+                    <span>NO RECOIL RETURNS</span>
+                 </div>
               </div>
             )}
           </motion.div>
