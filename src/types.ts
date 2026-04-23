@@ -10,7 +10,7 @@ export interface Product {
   name: string;
   price: number;
   originalPrice?: number;
-  category: "hoodies" | "tees" | "accessories" | "footwear";
+  category: "hoodies" | "tees" | "accessories" | "footwear" | "jeans" | "shirts";
   gender: "men" | "women" | "unisex";
   image: string;
   description: string;
