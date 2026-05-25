@@ -28,6 +28,7 @@ const ImageWithFallback = ({ src, alt, className, ...props }: any) => {
 };
 
 export default function App() {
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -56,6 +57,57 @@ export default function App() {
   const [trackingId, setTrackingId] = useState("");
   const [trackingStatus, setTrackingStatus] = useState<any>(null);
 
+  // Checkout Form States
+  const [checkoutName, setCheckoutName] = useState("");
+  const [checkoutEmail, setCheckoutEmail] = useState("");
+  const [checkoutAddress, setCheckoutAddress] = useState("");
+  const [checkoutCity, setCheckoutCity] = useState("");
+  const [checkoutZip, setCheckoutZip] = useState("");
+
+  // Fetch Products on Mount
+  useEffect(() => {
+    const sessionStorageKey = "core_session_id";
+    let sessionId = localStorage.getItem(sessionStorageKey);
+    if (!sessionId) {
+      sessionId = `sess-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+      localStorage.setItem(sessionStorageKey, sessionId);
+    }
+
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale || "en-IN";
+    const localeCountryCode = locale.includes("-") ? locale.split("-")[1] : "IN";
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown";
+    const stateGuess = timezone.includes("/") ? timezone.split("/")[1].replace(/_/g, " ") : "Unknown";
+    const countryGuess = localeCountryCode === "IN" ? "India" : localeCountryCode;
+
+    fetch("http://localhost:4000/api/analytics/visit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId,
+        state: stateGuess,
+        country: countryGuess,
+        device: /Mobi|Android|iPhone/i.test(navigator.userAgent) ? "mobile" : "desktop",
+        source: "storefront"
+      })
+    }).catch(() => {
+      // Analytics failure should never block shopping flow.
+    });
+
+    fetch("http://localhost:4000/api/products")
+      .then(res => {
+        if (!res.ok) throw new Error("API server unreachable");
+        return res.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) {
+          setProducts(data);
+        }
+      })
+      .catch(err => {
+        console.warn("Falling back to local static catalog:", err);
+      });
+  }, []);
+
   useEffect(() => {
     // Show popup after a delay, but more reliably
     const timer = setTimeout(() => {
@@ -65,7 +117,7 @@ export default function App() {
   }, []);
 
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter(p => {
+    return products.filter(p => {
       const searchStr = searchQuery.toLowerCase().trim();
       
       // Improved search: matches name, category, description, and tags
@@ -93,12 +145,12 @@ export default function App() {
       
       return matchesSearch && matchesCategory && matchesGender && matchesMood;
     });
-  }, [searchQuery, activeCategory, activeGender, activeMood]);
+  }, [searchQuery, activeCategory, activeGender, activeMood, products]);
 
   const recommendedProducts = useMemo(() => {
     if (!selectedProduct) return [];
-    return PRODUCTS.filter(p => p.id !== selectedProduct.id && (p.category === selectedProduct.category)).slice(0, 4);
-  }, [selectedProduct]);
+    return products.filter(p => p.id !== selectedProduct.id && (p.category === selectedProduct.category)).slice(0, 4);
+  }, [selectedProduct, products]);
 
   const addToCart = (product: Product, size?: string) => {
     if (!size && product.sizes[0] !== "One Size" && product.sizes.length > 0) {
@@ -184,23 +236,90 @@ export default function App() {
   // Determine if we should show the hero/marquee
   const isDeepBrowsing = activeCategory !== "all" || searchQuery !== "" || activeGender !== "all" || activeMood !== null;
 
-  const handleTrackOrder = (e: React.FormEvent) => {
+  const handleTrackOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!trackingId) return;
-    // Mock tracking logic
-    setTrackingStatus({
-      id: trackingId,
-      status: "In Transit",
-      location: "BENGALURU HUB",
-      eta: "DEC 28, 2024",
-      steps: [
-        { title: "ORDER PLACED", date: "DEC 22", done: true },
-        { title: "PACKED", date: "DEC 23", done: true },
-        { title: "SHIPPED", date: "DEC 24", done: true },
-        { title: "IN TRANSIT", date: "DEC 25", done: false },
-        { title: "OUT FOR DELIVERY", date: "DEC 28", done: false },
-      ]
-    });
+    try {
+      const res = await fetch(`http://localhost:4000/api/orders/${trackingId}`);
+      if (!res.ok) {
+        alert("Order signal not detected. Verify the Order ID.");
+        setTrackingStatus(null);
+        return;
+      }
+      const data = await res.json();
+      setTrackingStatus(data);
+    } catch (err) {
+      console.error("Error tracking order:", err);
+      alert("Fulfillment signal query failed.");
+    }
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!checkoutName || !checkoutEmail || !checkoutAddress || !checkoutCity || !checkoutZip) {
+      alert("Please fill in all shipping and delivery details.");
+      return;
+    }
+
+    const orderPayload = {
+      items: cart.map(item => ({
+        id: item.id.split('-')[0], // Extract original ID if sized (e.g. core-001-S -> core-001)
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image
+      })),
+      shippingDetails: {
+        name: checkoutName,
+        email: checkoutEmail,
+        phone: phoneNumber || "Not Provided"
+      },
+      deliveryPoint: {
+        address: checkoutAddress,
+        city: checkoutCity,
+        zip: checkoutZip
+      },
+      subtotal,
+      totalDiscount,
+      total
+    };
+
+    try {
+      const res = await fetch("http://localhost:4000/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderPayload)
+      });
+
+      if (!res.ok) throw new Error("Order creation failed");
+
+      const data = await res.json();
+      alert(`Order placed successfully! Your unique Order ID is: ${data.orderId}`);
+      
+      // Reset cart and checkout states
+      setCart([]);
+      setIsCheckout(false);
+
+      // Open tracking page automatically
+      setTrackingId(data.orderId);
+      setIsTrackOrderOpen(true);
+
+      // Fetch immediate tracking info
+      const trackRes = await fetch(`http://localhost:4000/api/orders/${data.orderId}`);
+      if (trackRes.ok) {
+        const trackData = await trackRes.json();
+        setTrackingStatus(trackData);
+      }
+
+      // Clear fields
+      setCheckoutName("");
+      setCheckoutEmail("");
+      setCheckoutAddress("");
+      setCheckoutCity("");
+      setCheckoutZip("");
+    } catch (err) {
+      console.error("Error placing order:", err);
+      alert("Failed to submit order. Please check connection and try again.");
+    }
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -776,6 +895,7 @@ export default function App() {
         toggleWishlist={toggleWishlist}
         formatPrice={formatPrice}
         addToCart={addToCart}
+        products={products}
       />
 
       <TrackOrderDrawer 
@@ -872,17 +992,17 @@ export default function App() {
                    <div className="space-y-8">
                       <h3 className="font-display font-black text-[10px] uppercase tracking-[0.4em] text-zinc-300">01. Shipping Details</h3>
                       <div className="space-y-4">
-                        <input type="text" placeholder="FULL NAME" className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
-                        <input type="email" placeholder="EMAIL ADDRESS" className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
+                        <input type="text" placeholder="FULL NAME" value={checkoutName} onChange={(e) => setCheckoutName(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
+                        <input type="email" placeholder="EMAIL ADDRESS" value={checkoutEmail} onChange={(e) => setCheckoutEmail(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
                       </div>
                    </div>
                    <div className="space-y-8">
                       <h3 className="font-display font-black text-[10px] uppercase tracking-[0.4em] text-zinc-300">02. Delivery Point</h3>
                       <div className="space-y-4">
-                        <input type="text" placeholder="SHIPPING ADDRESS" className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
+                        <input type="text" placeholder="SHIPPING ADDRESS" value={checkoutAddress} onChange={(e) => setCheckoutAddress(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
                         <div className="grid grid-cols-2 gap-4">
-                          <input type="text" placeholder="CITY" className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
-                          <input type="text" placeholder="ZIP CODE" className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
+                          <input type="text" placeholder="CITY" value={checkoutCity} onChange={(e) => setCheckoutCity(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
+                          <input type="text" placeholder="ZIP CODE" value={checkoutZip} onChange={(e) => setCheckoutZip(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
                         </div>
                       </div>
                    </div>
@@ -918,7 +1038,7 @@ export default function App() {
                          <span>{formatPrice(total)}</span>
                        </div>
                     </div>
-                   <button className="w-full bg-black text-white py-6 font-display font-bold uppercase text-[11px] tracking-widest hover:opacity-90 transition-all transition-transform active:scale-[0.98]">PLACE ORDER</button>
+                   <button onClick={handlePlaceOrder} className="w-full bg-black text-white py-6 font-display font-bold uppercase text-[11px] tracking-widest hover:opacity-90 transition-all transition-transform active:scale-[0.98]">PLACE ORDER</button>
                 </div>
               </div>
             </div>
@@ -1113,10 +1233,10 @@ function TrackOrderDrawer({ isOpen, setIsOpen, trackingId, setTrackingId, handle
   );
 }
 
-function WishlistDrawer({ isWishlistOpen, setIsWishlistOpen, wishlist, toggleWishlist, formatPrice, addToCart }: any) {
+function WishlistDrawer({ isWishlistOpen, setIsWishlistOpen, wishlist, toggleWishlist, formatPrice, addToCart, products }: any) {
   const wishlistItems = useMemo(() => {
-    return PRODUCTS.filter(p => wishlist.includes(p.id));
-  }, [wishlist]);
+    return products.filter((p: any) => wishlist.includes(p.id));
+  }, [wishlist, products]);
 
   return (
     <AnimatePresence>
