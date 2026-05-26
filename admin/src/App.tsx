@@ -157,6 +157,7 @@ function App() {
   const [pCollection, setPCollection] = useState('core essentials');
   const [pImage, setPImage] = useState('');
   const [pImagePreview, setPImagePreview] = useState('');
+  const [pImageUploaded, setPImageUploaded] = useState(false);
   const [pDescription, setPDescription] = useState('');
   const [pColors, setPColors] = useState('');
   const [pSizes, setPSizes] = useState('');
@@ -211,7 +212,7 @@ function App() {
       const res = await fetch('http://localhost:4000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'admin', userId: adminId }),
+        body: JSON.stringify({ role: 'admin', userId: adminId, password: adminPassword }),
       });
 
       if (!res.ok) {
@@ -325,8 +326,37 @@ function App() {
       if (!result) return;
       setPImage(result);
       setPImagePreview(result);
+      setPImageUploaded(false);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleUploadImageToServer = async () => {
+    if (!pImage) return;
+    try {
+      const res = await fetch('http://localhost:4000/api/uploads/image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token || '',
+        },
+        body: JSON.stringify({ image: pImage }),
+      });
+
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      if (data && data.url) {
+        setPImage(data.url);
+        setPImagePreview(data.url);
+        setPImageUploaded(true);
+        alert('Image uploaded successfully.');
+      } else {
+        throw new Error('Invalid upload response');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Image upload failed.');
+    }
   };
 
   const handleSaveProduct = async (e: React.FormEvent) => {
@@ -1069,14 +1099,16 @@ function App() {
                 <div className="form-group">
                   <label>Or Upload Image</label>
                   <input type="file" accept="image/*" className="form-input" onChange={handleImageUpload} />
-                  {pImagePreview && (
-                    <img
-                      src={pImagePreview}
-                      alt="Product preview"
-                      className="upload-preview"
-                      onError={() => setPImagePreview('')}
-                    />
-                  )}
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {pImage && pImage.startsWith('data:') && (
+                      <button type="button" className="btn-sm-primary" onClick={handleUploadImageToServer}>
+                        Upload Image
+                      </button>
+                    )}
+                    {pImage && !pImage.startsWith('data:') && (
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Image ready</span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -1099,13 +1131,34 @@ function App() {
                     <input type="text" className="form-input" value={pSizes} onChange={e => setPSizes(e.target.value)} />
                   </div>
                 </div>
+                <div className="upload-preview-wrapper">
+                  {pImagePreview ? (
+                    <>
+                      <img
+                        src={pImagePreview}
+                        alt="Product preview"
+                        className="upload-preview"
+                        onError={() => setPImagePreview('')}
+                      />
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        {pImageUploaded ? 'Uploaded to remote storage' : pImage && pImage.startsWith('data:') ? 'Ready to upload' : 'Using URL'}
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>No preview</div>
+                  )}
+                </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-action-outline" onClick={() => setIsProductModalOpen(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-sm-primary">
-                  Save Changes
+                <button
+                  type="submit"
+                  className="btn-sm-primary"
+                  disabled={pImage && pImage.startsWith('data:') && !pImageUploaded}
+                >
+                  {selectedProduct ? 'Update Product' : 'Save Product'}
                 </button>
               </div>
             </form>

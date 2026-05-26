@@ -521,7 +521,7 @@ body {
 
 .modal-card {
   width: 100%;
-  max-width: 600px;
+  max-width: 900px;
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -564,6 +564,10 @@ body {
   padding: 30px;
   overflow-y: auto;
   flex-grow: 1;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  align-items: start;
 }
 
 .modal-footer {
@@ -1068,11 +1072,28 @@ body {
 .upload-preview {
   margin-top: 10px;
   width: 100%;
-  max-width: 220px;
+  max-width: 320px;
   aspect-ratio: 4 / 5;
   object-fit: cover;
   border: 1px solid var(--border-color);
   background: #f5f5f4;
+}
+
+/* place preview column styling */
+.modal-body > .upload-preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .modal-card {
+    max-width: 720px;
+  }
+
+  .modal-body {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1024px) {

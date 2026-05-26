@@ -1,0 +1,74 @@
+[
+  {
+    "sessionId": "sess-1779727393267-68817",
+    "state": "Calcutta",
+    "country": "US",
+    "device": "desktop",
+    "source": "storefront",
+    "createdAt": "2026-05-26T11:33:40.427Z"
+  },
+  {
+    "sessionId": "sess-1779727393267-68817",
+    "state": "Calcutta",
+    "country": "US",
+    "device": "desktop",
+    "source": "storefront",
+    "createdAt": "2026-05-26T11:33:40.436Z"
+  },
+  {
+    "sessionId": "sess-1779727393267-68817",
+    "state": "Calcutta",
+    "country": "US",
+    "device": "desktop",
+    "source": "storefront",
+    "createdAt": "2026-05-26T11:34:25.277Z"
+  },
+  {
+    "sessionId": "sess-1779803618502-45223",
+    "state": "Calcutta",
+    "country": "US",
+    "device": "desktop",
+    "source": "storefront",
+    "createdAt": "2026-05-26T13:53:38.522Z"
+  },
+  {
+    "sessionId": "sess-1779803618502-45223",
+    "state": "Calcutta",
+    "country": "US",
+    "device": "desktop",
+    "source": "storefront",
+    "createdAt": "2026-05-26T13:53:38.527Z"
+  },
+  {
+    "sessionId": "sess-1779803618502-45223",
+    "state": "Calcutta",
+    "country": "US",
+    "device": "desktop",
+    "source": "storefront",
+    "createdAt": "2026-05-26T13:54:54.446Z"
+  },
+  {
+    "sessionId": "sess-1779803618502-45223",
+    "state": "Calcutta",
+    "country": "US",
+    "device": "desktop",
+    "source": "storefront",
+    "createdAt": "2026-05-26T13:55:08.730Z"
+  },
+  {
+    "sessionId": "sess-1779803618502-45223",
+    "state": "Calcutta",
+    "country": "US",
+    "device": "desktop",
+    "source": "storefront",
+    "createdAt": "2026-05-26T13:55:58.314Z"
+  },
+  {
+    "sessionId": "sess-1779803618502-45223",
+    "state": "Calcutta",
+    "country": "US",
+    "device": "desktop",
+    "source": "storefront",
+    "createdAt": "2026-05-26T13:55:58.323Z"
+  }
+]
