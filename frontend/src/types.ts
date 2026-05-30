@@ -29,4 +29,5 @@ export interface Discount {
 
 export interface CartItem extends Product {
   quantity: number;
+  baseProductId?: string;
 }

@@ -1156,7 +1156,7 @@ function App() {
                 <button
                   type="submit"
                   className="btn-sm-primary"
-                  disabled={pImage && pImage.startsWith('data:') && !pImageUploaded}
+                  disabled={!!(pImage && pImage.startsWith('data:') && !pImageUploaded)}
                 >
                   {selectedProduct ? 'Update Product' : 'Save Product'}
                 </button>

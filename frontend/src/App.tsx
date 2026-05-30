@@ -8,9 +8,36 @@ import {
 import { Product, CartItem } from "./types";
 import { PRODUCTS } from "./constants";
 
-const ImageWithFallback = ({ src, alt, className, ...props }: any) => {
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:4000";
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1594931984428-2287ab67073b?auto=format&fit=crop&q=80&w=800";
+
+const categoryImageFallbacks: Record<string, string> = {
+  hoodies: "https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&q=80&w=800",
+  tees: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=800",
+  footwear: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=800",
+  jeans: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&q=80&w=800",
+  shirts: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&q=80&w=800",
+  accessories: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=800",
+};
+
+const getCategoryFallbackImage = (category?: string) => categoryImageFallbacks[category || ""] || FALLBACK_IMAGE;
+
+const buildProductDescription = (rawProduct: any) => {
+  if (typeof rawProduct?.description === "string" && rawProduct.description.trim().length > 0) {
+    return rawProduct.description;
+  }
+
+  const name = rawProduct?.name || "CORE Essential";
+  const category = rawProduct?.category || "streetwear";
+  const gender = rawProduct?.gender || "unisex";
+  return `${name} is a premium ${gender} ${category} crafted for everyday comfort, confident fits, and long-lasting wear.`;
+};
+
+const ImageWithFallback = ({ src, alt, className, fallbackSrc, ...props }: any) => {
   const [error, setError] = useState(false);
-  const fallbackSrc = "https://images.unsplash.com/photo-1594931984428-2287ab67073b?auto=format&fit=crop&q=80&w=800";
+  const safeSrc = typeof src === "string" && src.trim().length > 0 ? src : FALLBACK_IMAGE;
+  const safeFallbackSrc = typeof fallbackSrc === "string" && fallbackSrc.trim().length > 0 ? fallbackSrc : FALLBACK_IMAGE;
+  const safeAlt = typeof alt === "string" && alt.trim().length > 0 ? alt : "CORE product image";
 
   useEffect(() => {
     setError(false);
@@ -18,9 +45,12 @@ const ImageWithFallback = ({ src, alt, className, ...props }: any) => {
 
   return (
     <img
-      src={error ? fallbackSrc : src}
-      alt={alt}
+      src={error ? safeFallbackSrc : safeSrc}
+      alt={safeAlt}
       className={className}
+      loading={props.loading || "lazy"}
+      decoding={props.decoding || "async"}
+      referrerPolicy={props.referrerPolicy || "no-referrer"}
       onError={() => setError(true)}
       {...props}
     />
@@ -28,7 +58,24 @@ const ImageWithFallback = ({ src, alt, className, ...props }: any) => {
 };
 
 export default function App() {
-  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const normalizeProduct = (rawProduct: any): Product => {
+    const normalizedImage = typeof rawProduct?.image === "string" && rawProduct.image.trim().length > 0
+      ? rawProduct.image
+      : (Array.isArray(rawProduct?.images) && typeof rawProduct.images[0] === "string" && rawProduct.images[0].trim().length > 0
+        ? rawProduct.images[0]
+        : getCategoryFallbackImage(rawProduct?.category));
+
+    return {
+      ...rawProduct,
+      image: normalizedImage,
+      sizes: Array.isArray(rawProduct?.sizes) && rawProduct.sizes.length > 0 ? rawProduct.sizes : ["One Size"],
+      colors: Array.isArray(rawProduct?.colors) ? rawProduct.colors : [],
+      reviews: Array.isArray(rawProduct?.reviews) ? rawProduct.reviews : [],
+      description: buildProductDescription(rawProduct),
+    } as Product;
+  };
+
+  const [products, setProducts] = useState<Product[]>(PRODUCTS.map(normalizeProduct));
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -63,6 +110,15 @@ export default function App() {
   const [checkoutAddress, setCheckoutAddress] = useState("");
   const [checkoutCity, setCheckoutCity] = useState("");
   const [checkoutZip, setCheckoutZip] = useState("");
+  const [checkoutStep, setCheckoutStep] = useState<"phone" | "address" | "payment">("phone");
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "upi" | "cod">("card");
+  const [cardName, setCardName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [upiId, setUpiId] = useState("");
+  const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
+  const [isShippingInfoOpen, setIsShippingInfoOpen] = useState(false);
 
   // Fetch Products on Mount
   useEffect(() => {
@@ -79,7 +135,7 @@ export default function App() {
     const stateGuess = timezone.includes("/") ? timezone.split("/")[1].replace(/_/g, " ") : "Unknown";
     const countryGuess = localeCountryCode === "IN" ? "India" : localeCountryCode;
 
-    fetch("http://localhost:4000/api/analytics/visit", {
+    fetch(`${API_BASE}/api/analytics/visit`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -93,14 +149,14 @@ export default function App() {
       // Analytics failure should never block shopping flow.
     });
 
-    fetch("http://localhost:4000/api/products")
+    fetch(`${API_BASE}/api/products`)
       .then(res => {
         if (!res.ok) throw new Error("API server unreachable");
         return res.json();
       })
       .then(data => {
         if (Array.isArray(data)) {
-          setProducts(data);
+          setProducts(data.map(normalizeProduct));
         }
       })
       .catch(err => {
@@ -163,7 +219,17 @@ export default function App() {
       if (existing) {
         return prev.map(item => item.id === id ? { ...item, quantity: item.quantity + 1 } : item);
       }
-      return [...prev, { ...product, id, quantity: 1, name: size ? `${product.name} (${size})` : product.name }];
+      return [
+        ...prev,
+        {
+          ...product,
+          image: product.image || FALLBACK_IMAGE,
+          id,
+          baseProductId: product.id,
+          quantity: 1,
+          name: size ? `${product.name} (${size})` : product.name,
+        },
+      ];
     });
     setIsCartOpen(true);
   };
@@ -240,7 +306,7 @@ export default function App() {
     e.preventDefault();
     if (!trackingId) return;
     try {
-      const res = await fetch(`http://localhost:4000/api/orders/${trackingId}`);
+      const res = await fetch(`${API_BASE}/api/orders/${trackingId}`);
       if (!res.ok) {
         alert("Order signal not detected. Verify the Order ID.");
         setTrackingStatus(null);
@@ -254,15 +320,59 @@ export default function App() {
     }
   };
 
-  const handlePlaceOrder = async () => {
+  const isValidPhoneNumber = (value: string) => /^\d{10}$/.test(value.trim());
+
+  const handleOpenCheckout = () => {
+    // Ensure checkout is shown from a common layout even if user starts from product detail view.
+    setSelectedProduct(null);
+    setCheckoutStep(isValidPhoneNumber(phoneNumber) ? "address" : "phone");
+    setIsCheckout(true);
+  };
+
+  const handleContinueToAddress = () => {
+    if (!isValidPhoneNumber(phoneNumber)) {
+      alert("Please enter a valid 10-digit phone number before checkout.");
+      return;
+    }
+    setCheckoutStep("address");
+  };
+
+  const handleContinueToPayment = () => {
     if (!checkoutName || !checkoutEmail || !checkoutAddress || !checkoutCity || !checkoutZip) {
       alert("Please fill in all shipping and delivery details.");
+      return;
+    }
+    setCheckoutStep("payment");
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!isValidPhoneNumber(phoneNumber)) {
+      alert("Please enter a valid 10-digit phone number before placing your order.");
+      setCheckoutStep("phone");
+      return;
+    }
+
+    if (!checkoutName || !checkoutEmail || !checkoutAddress || !checkoutCity || !checkoutZip) {
+      alert("Please fill in all shipping and delivery details.");
+      setCheckoutStep("address");
+      return;
+    }
+
+    if (paymentMethod === "card") {
+      if (!cardName || cardNumber.replace(/\s/g, "").length < 13 || !cardExpiry || cardCvv.length < 3) {
+        alert("Please complete your card details.");
+        return;
+      }
+    }
+
+    if (paymentMethod === "upi" && !upiId.includes("@")) {
+      alert("Please enter a valid UPI ID.");
       return;
     }
 
     const orderPayload = {
       items: cart.map(item => ({
-        id: item.id.split('-')[0], // Extract original ID if sized (e.g. core-001-S -> core-001)
+        id: item.baseProductId || item.id,
         name: item.name,
         price: item.price,
         quantity: item.quantity,
@@ -278,13 +388,17 @@ export default function App() {
         city: checkoutCity,
         zip: checkoutZip
       },
+      payment: {
+        method: paymentMethod,
+        status: paymentMethod === "cod" ? "pending" : "authorized"
+      },
       subtotal,
       totalDiscount,
       total
     };
 
     try {
-      const res = await fetch("http://localhost:4000/api/orders", {
+      const res = await fetch(`${API_BASE}/api/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload)
@@ -304,7 +418,7 @@ export default function App() {
       setIsTrackOrderOpen(true);
 
       // Fetch immediate tracking info
-      const trackRes = await fetch(`http://localhost:4000/api/orders/${data.orderId}`);
+      const trackRes = await fetch(`${API_BASE}/api/orders/${data.orderId}`);
       if (trackRes.ok) {
         const trackData = await trackRes.json();
         setTrackingStatus(trackData);
@@ -316,6 +430,13 @@ export default function App() {
       setCheckoutAddress("");
       setCheckoutCity("");
       setCheckoutZip("");
+      setCheckoutStep("phone");
+      setPaymentMethod("card");
+      setCardName("");
+      setCardNumber("");
+      setCardExpiry("");
+      setCardCvv("");
+      setUpiId("");
     } catch (err) {
       console.error("Error placing order:", err);
       alert("Failed to submit order. Please check connection and try again.");
@@ -408,10 +529,11 @@ export default function App() {
               <ImageWithFallback 
                 src={selectedProduct.image} 
                 alt={selectedProduct.name} 
+                fallbackSrc={getCategoryFallbackImage(selectedProduct.category)}
                 className="w-full aspect-[4/5] object-cover rounded-sm bg-zinc-50"
               />
               <div className="grid grid-cols-2 gap-4">
-                <ImageWithFallback src={selectedProduct.image} className="w-full aspect-[4/5] object-cover rounded-sm bg-zinc-50 opacity-50" />
+                <ImageWithFallback src={selectedProduct.image} fallbackSrc={getCategoryFallbackImage(selectedProduct.category)} className="w-full aspect-[4/5] object-cover rounded-sm bg-zinc-50 opacity-50" />
                 <div className="bg-zinc-50 rounded-sm aspect-[4/5] flex items-center justify-center text-zinc-300 font-display font-bold text-[10px] tracking-widest uppercase italic">SIGNAL LOAD...</div>
               </div>
             </div>
@@ -438,7 +560,7 @@ export default function App() {
               <div className="mb-10">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="font-display font-black uppercase text-[10px] tracking-[0.3em]">Select Size</h3>
-                  <button className="text-[10px] font-bold text-zinc-400 underline underline-offset-4 hover:text-black transition-colors">SIZE CHART</button>
+                  <button onClick={() => setIsSizeChartOpen(true)} className="text-[10px] font-bold text-zinc-400 underline underline-offset-4 hover:text-black transition-colors">SIZE CHART</button>
                 </div>
                 <div className="grid grid-cols-4 md:grid-cols-5 gap-2">
                   {selectedProduct.sizes.map(size => (
@@ -470,14 +592,14 @@ export default function App() {
               </div>
 
               <div className="space-y-6 pt-6 border-t border-zinc-100">
-                <div className="flex items-center gap-4 text-xs font-bold text-zinc-500">
+                 <button onClick={() => setIsSizeChartOpen(true)} className="w-full flex items-center gap-4 text-xs font-bold text-zinc-500 hover:text-black transition-colors text-left">
                    <div className="p-2 bg-zinc-100 rounded-full"><Plus size={14} /></div>
-                   <span>PRODUCT DETAILS</span>
-                </div>
-                <div className="flex items-center gap-4 text-xs font-bold text-zinc-500">
+                   <span>PRODUCT DETAILS & SIZE INFO</span>
+                 </button>
+                 <button onClick={() => setIsShippingInfoOpen(true)} className="w-full flex items-center gap-4 text-xs font-bold text-zinc-500 hover:text-black transition-colors text-left">
                    <div className="p-2 bg-zinc-100 rounded-full"><Plus size={14} /></div>
                    <span>SHIPPING & RETURNS</span>
-                </div>
+                 </button>
               </div>
             </div>
           </div>
@@ -488,7 +610,7 @@ export default function App() {
               {recommendedProducts.map(product => (
                 <div key={product.id} onClick={() => { setSelectedProduct(product); setSelectedSize(""); window.scrollTo(0, 0); }} className="group cursor-pointer">
                   <div className="aspect-[4/5] overflow-hidden bg-zinc-50 rounded-sm mb-4">
-                    <ImageWithFallback src={product.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <ImageWithFallback src={product.image} fallbackSrc={getCategoryFallbackImage(product.category)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   </div>
                   <div className="space-y-1">
                     <h4 className="font-display font-bold text-[11px] uppercase tracking-wide group-hover:text-zinc-500 transition-colors">{product.name}</h4>
@@ -509,8 +631,17 @@ export default function App() {
           subtotal={subtotal} 
           totalDiscount={totalDiscount}
           total={total} 
-          setIsCheckout={setIsCheckout} 
+          onCheckout={handleOpenCheckout}
           formatPrice={formatPrice} 
+        />
+        <SizeChartDrawer
+          isOpen={isSizeChartOpen}
+          setIsOpen={setIsSizeChartOpen}
+          product={selectedProduct}
+        />
+        <ShippingReturnsDrawer
+          isOpen={isShippingInfoOpen}
+          setIsOpen={setIsShippingInfoOpen}
         />
       </div>
     );
@@ -581,7 +712,7 @@ export default function App() {
             </button>
           ))}
           <div className="w-px h-4 bg-zinc-200 mx-2" />
-          {["tees", "hoodies", "footwear", "jeans", "shirts"].map(cat => (
+          {["tees", "hoodies", "jeans", "shirts"].map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)} className={`transition-all ${activeCategory === cat ? 'text-black' : 'text-zinc-400 hover:text-black'}`}>
               {cat}
             </button>
@@ -619,7 +750,7 @@ export default function App() {
 
                 <div className="h-px bg-zinc-50 my-4" />
                 
-                {["all", "tees", "hoodies", "footwear", "jeans", "shirts"].map(cat => (
+                {["all", "tees", "hoodies", "jeans", "shirts"].map(cat => (
                   <button key={cat} onClick={() => { setActiveCategory(cat); setIsMobileMenuOpen(false); }} className={`text-left text-lg font-display font-black uppercase tracking-tight ${activeCategory === cat ? 'text-black' : 'text-zinc-300'}`}>
                     {cat}
                   </button>
@@ -656,7 +787,18 @@ export default function App() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 <div className="absolute bottom-12 left-12">
                   <h3 className="text-white text-5xl font-display font-black tracking-tighter leading-none mb-4">SUMMER<br/>SHIRTS</h3>
-                  <button className="bg-white text-black px-6 py-3 font-display font-bold text-[10px] tracking-widest uppercase hover:bg-black hover:text-white transition-colors">STARTING AT ₹799</button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveCategory("shirts");
+                      setActiveGender("all");
+                      setActiveMood(null);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="bg-white text-black px-6 py-3 font-display font-bold text-[10px] tracking-widest uppercase hover:bg-black hover:text-white transition-colors"
+                  >
+                    STARTING AT ₹799
+                  </button>
                 </div>
               </div>
               <div className="relative overflow-hidden group cursor-pointer border-r border-zinc-100">
@@ -665,7 +807,18 @@ export default function App() {
                 <div className="absolute bottom-12 left-12">
                   <h3 className="text-white text-5xl font-display font-black tracking-tighter leading-none mb-4">EVERYDAY<br/>TROUSERS</h3>
                   <p className="text-white/80 font-bold uppercase text-[10px] tracking-widest mb-6">Built for comfort, designed for style</p>
-                  <button className="text-white border-b-2 border-white pb-1 font-display font-bold text-[10px] tracking-widest uppercase hover:text-white/70 transition-colors">EXPLORE NOW</button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveCategory("jeans");
+                      setActiveGender("all");
+                      setActiveMood(null);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="text-white border-b-2 border-white pb-1 font-display font-bold text-[10px] tracking-widest uppercase hover:text-white/70 transition-colors"
+                  >
+                    EXPLORE NOW
+                  </button>
                 </div>
               </div>
               <div className="relative overflow-hidden group cursor-pointer">
@@ -677,7 +830,18 @@ export default function App() {
                     <span className="text-white font-bold text-[10px] tracking-widest uppercase">BAGGY</span>
                     <span className="text-white font-bold text-[10px] tracking-widest uppercase opacity-50">RELAXED</span>
                   </div>
-                  <button className="bg-white text-black px-6 py-3 font-display font-bold text-[10px] tracking-widest uppercase hover:bg-black hover:text-white transition-colors">SHOP DENIM</button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveCategory("jeans");
+                      setActiveGender("all");
+                      setActiveMood(null);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="bg-white text-black px-6 py-3 font-display font-bold text-[10px] tracking-widest uppercase hover:bg-black hover:text-white transition-colors"
+                  >
+                    SHOP DENIM
+                  </button>
                 </div>
               </div>
             </section>
@@ -688,22 +852,44 @@ export default function App() {
                 onClick={() => { setActiveGender("men"); setActiveCategory("all"); setActiveMood(null); window.scrollTo(0, 0); }}
                 className="relative group cursor-pointer overflow-hidden border-r border-zinc-100"
               >
-                <ImageWithFallback src="https://images.unsplash.com/photo-1488161628813-04466f872be2?auto=format&fit=crop&q=80&w=1200" className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-110" alt="Men" />
+                <ImageWithFallback src="https://images.unsplash.com/photo-1550246140-5119ae4790b8?auto=format&fit=crop&q=80&w=1200" className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-110" alt="Men" />
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/40 transition-all duration-700" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
                   <h3 className="text-6xl md:text-8xl font-display font-black tracking-tighter mb-4 opacity-0 group-hover:opacity-100 transition-all duration-700 translate-y-10 group-hover:translate-y-0 uppercase">Men</h3>
-                  <button className="px-10 py-4 bg-white text-black font-display font-black text-[11px] tracking-[0.3em] uppercase opacity-0 group-hover:opacity-100 transition-all duration-1000 delay-100">EXPLORE ARCHIVE</button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveGender("men");
+                      setActiveCategory("all");
+                      setActiveMood(null);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="px-10 py-4 bg-white text-black font-display font-black text-[11px] tracking-[0.3em] uppercase opacity-0 group-hover:opacity-100 transition-all duration-1000 delay-100"
+                  >
+                    EXPLORE ARCHIVE
+                  </button>
                 </div>
               </div>
               <div 
                 onClick={() => { setActiveGender("women"); setActiveCategory("all"); setActiveMood(null); window.scrollTo(0, 0); }}
                 className="relative group cursor-pointer overflow-hidden"
               >
-                <ImageWithFallback src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=1200" className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-110" alt="Women" />
+                <ImageWithFallback src="https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?auto=format&fit=crop&q=80&w=1200" className="w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-110" alt="Women" />
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/40 transition-all duration-700" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
                   <h3 className="text-6xl md:text-8xl font-display font-black tracking-tighter mb-4 opacity-0 group-hover:opacity-100 transition-all duration-700 translate-y-10 group-hover:translate-y-0 uppercase">Women</h3>
-                  <button className="px-10 py-4 bg-white text-black font-display font-black text-[11px] tracking-[0.3em] uppercase opacity-0 group-hover:opacity-100 transition-all duration-1000 delay-100">SHOP NEW DROP</button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveGender("women");
+                      setActiveCategory("all");
+                      setActiveMood(null);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="px-10 py-4 bg-white text-black font-display font-black text-[11px] tracking-[0.3em] uppercase opacity-0 group-hover:opacity-100 transition-all duration-1000 delay-100"
+                  >
+                    SHOP NEW DROP
+                  </button>
                 </div>
               </div>
             </section>
@@ -716,7 +902,7 @@ export default function App() {
                     { name: "SHIRTS", img: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&q=80&w=600", cat: "shirts" },
                     { name: "JEANS", img: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&q=80&w=600", cat: "jeans" },
                     { name: "HOODIES", img: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=600", cat: "hoodies" },
-                    { name: "FOOTWEAR", img: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600", cat: "footwear" },
+                    { name: "TROUSERS", img: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?auto=format&fit=crop&q=80&w=600", cat: "jeans" },
                     { name: "TEES", img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=600", cat: "tees" },
                   ].map((cat, i) => (
                     <div key={i} onClick={() => setActiveCategory(cat.cat)} className="group cursor-pointer">
@@ -738,7 +924,7 @@ export default function App() {
                     { title: "LUXURY", sub: "REFINED", img: "https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&q=80&w=600" },
                     { title: "BASICS", sub: "DAILY", img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=600" },
                     { title: "FORMAL", sub: "DRIP", img: "https://images.unsplash.com/photo-1550246140-5119ae4790b8?auto=format&fit=crop&q=80&w=600" },
-                    { title: "SUMMER", sub: "ESCAPE", img: "https://images.unsplash.com/photo-1603252109303-12751441dd157?auto=format&fit=crop&q=80&w=600" },
+                    { title: "SUMMER", sub: "ESCAPE", img: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&q=80&w=600" },
                     { title: "HOLIDAY", sub: "PICKS", img: "https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?auto=format&fit=crop&q=80&w=600" },
                   ].map((mood, i) => (
                     <div 
@@ -767,7 +953,6 @@ export default function App() {
                  src={
                    activeCategory === "hoodies" ? "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&q=80&w=1920" :
                    activeCategory === "tees" ? "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=1920" :
-                   activeCategory === "footwear" ? "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=1920" :
                    activeCategory === "jeans" ? "https://images.unsplash.com/photo-1620331307338-782f9191e600?auto=format&fit=crop&q=80&w=1920" :
                    activeCategory === "shirts" ? "https://images.unsplash.com/photo-1596755094514-f87034a26aa4?auto=format&fit=crop&q=80&w=1920" :
                    "https://images.unsplash.com/photo-1554412930-c74f6645391c?auto=format&fit=crop&q=80&w=1920"
@@ -797,7 +982,7 @@ export default function App() {
         )}
 
         <div className="lg:hidden p-4 border-b flex gap-3 overflow-x-auto bg-white sticky top-[72px] z-40 no-scrollbar">
-          {["all", "Summer Arrival", "New Arrival", "Linen Shirt Man", "tees", "hoodies", "footwear"].map(cat => (
+          {["all", "Summer Arrival", "New Arrival", "Linen Shirt Man", "tees", "hoodies", "jeans", "shirts"].map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)} className={`whitespace-nowrap px-6 py-2.5 rounded-full font-black uppercase text-[10px] border-2 transition-all ${activeCategory === cat ? 'bg-black text-white border-black' : 'bg-white text-zinc-500 border-zinc-100'}`}>
               {cat}
             </button>
@@ -832,7 +1017,7 @@ export default function App() {
                 className="group cursor-pointer"
               >
                 <div className="relative aspect-[4/5] overflow-hidden bg-zinc-100 mb-4 transition-all rounded-sm">
-                  <ImageWithFallback src={product.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" referrerPolicy="no-referrer" />
+                  <ImageWithFallback src={product.image} fallbackSrc={getCategoryFallbackImage(product.category)} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" referrerPolicy="no-referrer" />
                   <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => toggleWishlist(product.id, e)} className="p-2 bg-white shadow-sm rounded-full hover:scale-110 transition-transform">
                       <Heart size={16} className={wishlist.includes(product.id) ? "fill-black text-black" : "text-black"} strokeWidth={wishlist.includes(product.id) ? 0 : 1.5} />
@@ -884,7 +1069,7 @@ export default function App() {
         subtotal={subtotal} 
         totalDiscount={totalDiscount}
         total={total} 
-        setIsCheckout={setIsCheckout} 
+        onCheckout={handleOpenCheckout}
         formatPrice={formatPrice} 
       />
 
@@ -985,27 +1170,96 @@ export default function App() {
                 <span>Return to Bag</span>
               </button>
               
-              <h2 className="text-4xl md:text-6xl font-display font-black mb-20 uppercase tracking-tighter">Checkout</h2>
-              
+              <h2 className="text-4xl md:text-6xl font-display font-black mb-8 uppercase tracking-tighter">Checkout</h2>
+              <div className="flex items-center gap-3 mb-12 text-[9px] font-black uppercase tracking-[0.25em]">
+                <span className={`${checkoutStep === "phone" ? "text-black" : "text-zinc-300"}`}>1. Phone</span>
+                <span className="text-zinc-200">/</span>
+                <span className={`${checkoutStep === "address" ? "text-black" : "text-zinc-300"}`}>2. Address</span>
+                <span className="text-zinc-200">/</span>
+                <span className={`${checkoutStep === "payment" ? "text-black" : "text-zinc-300"}`}>3. Payment</span>
+              </div>
+
               <div className="grid lg:grid-cols-2 gap-20 lg:gap-32">
-                <div className="space-y-16">
-                   <div className="space-y-8">
-                      <h3 className="font-display font-black text-[10px] uppercase tracking-[0.4em] text-zinc-300">01. Shipping Details</h3>
+                <div className="space-y-12">
+                  {checkoutStep === "phone" && (
+                    <div className="space-y-8">
+                      <h3 className="font-display font-black text-[10px] uppercase tracking-[0.4em] text-zinc-300">01. Contact Verification</h3>
+                      <p className="text-[11px] text-zinc-500 font-medium">For guest checkout, phone number is required before continuing.</p>
+                      <div className="space-y-4">
+                        <label className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Phone Number</label>
+                        <div className="flex gap-2">
+                          <div className="bg-zinc-50 border border-zinc-100 px-4 py-4 text-[11px] font-black">+91</div>
+                          <input
+                            type="tel"
+                            value={phoneNumber}
+                            onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                            placeholder="0000000000"
+                            className="flex-grow p-4 bg-zinc-50 border border-zinc-100 focus:border-black outline-none font-bold text-[11px] tracking-widest transition-all"
+                          />
+                        </div>
+                      </div>
+                      <button onClick={handleContinueToAddress} className="w-full bg-black text-white py-5 font-display font-black uppercase text-[10px] tracking-widest hover:bg-zinc-800 transition-all">
+                        Continue to Address
+                      </button>
+                    </div>
+                  )}
+
+                  {checkoutStep === "address" && (
+                    <div className="space-y-8">
+                      <h3 className="font-display font-black text-[10px] uppercase tracking-[0.4em] text-zinc-300">02. Shipping Address</h3>
                       <div className="space-y-4">
                         <input type="text" placeholder="FULL NAME" value={checkoutName} onChange={(e) => setCheckoutName(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
                         <input type="email" placeholder="EMAIL ADDRESS" value={checkoutEmail} onChange={(e) => setCheckoutEmail(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
-                      </div>
-                   </div>
-                   <div className="space-y-8">
-                      <h3 className="font-display font-black text-[10px] uppercase tracking-[0.4em] text-zinc-300">02. Delivery Point</h3>
-                      <div className="space-y-4">
                         <input type="text" placeholder="SHIPPING ADDRESS" value={checkoutAddress} onChange={(e) => setCheckoutAddress(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
                         <div className="grid grid-cols-2 gap-4">
                           <input type="text" placeholder="CITY" value={checkoutCity} onChange={(e) => setCheckoutCity(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
                           <input type="text" placeholder="ZIP CODE" value={checkoutZip} onChange={(e) => setCheckoutZip(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
                         </div>
                       </div>
-                   </div>
+                      <div className="flex gap-3">
+                        <button onClick={() => setCheckoutStep("phone")} className="w-full border border-zinc-200 py-5 font-display font-black uppercase text-[10px] tracking-widest hover:bg-zinc-50 transition-all">Back</button>
+                        <button onClick={handleContinueToPayment} className="w-full bg-black text-white py-5 font-display font-black uppercase text-[10px] tracking-widest hover:bg-zinc-800 transition-all">Continue to Payment</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {checkoutStep === "payment" && (
+                    <div className="space-y-8">
+                      <h3 className="font-display font-black text-[10px] uppercase tracking-[0.4em] text-zinc-300">03. Payment Details</h3>
+                      <div className="grid grid-cols-3 gap-3">
+                        <button onClick={() => setPaymentMethod("card")} className={`py-3 border text-[10px] font-black uppercase tracking-widest ${paymentMethod === "card" ? "bg-black text-white border-black" : "border-zinc-200 text-zinc-500"}`}>Card</button>
+                        <button onClick={() => setPaymentMethod("upi")} className={`py-3 border text-[10px] font-black uppercase tracking-widest ${paymentMethod === "upi" ? "bg-black text-white border-black" : "border-zinc-200 text-zinc-500"}`}>UPI</button>
+                        <button onClick={() => setPaymentMethod("cod")} className={`py-3 border text-[10px] font-black uppercase tracking-widest ${paymentMethod === "cod" ? "bg-black text-white border-black" : "border-zinc-200 text-zinc-500"}`}>COD</button>
+                      </div>
+
+                      {paymentMethod === "card" && (
+                        <div className="space-y-4">
+                          <input type="text" placeholder="CARD HOLDER NAME" value={cardName} onChange={(e) => setCardName(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
+                          <input type="text" placeholder="CARD NUMBER" value={cardNumber} onChange={(e) => setCardNumber(e.target.value.replace(/[^\d\s]/g, ""))} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
+                          <div className="grid grid-cols-2 gap-4">
+                            <input type="text" placeholder="MM/YY" value={cardExpiry} onChange={(e) => setCardExpiry(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
+                            <input type="password" placeholder="CVV" value={cardCvv} onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest uppercase transition-all" />
+                          </div>
+                          <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Accepted cards: Visa, Mastercard, Rupay, Amex</div>
+                        </div>
+                      )}
+
+                      {paymentMethod === "upi" && (
+                        <div className="space-y-4">
+                          <input type="text" placeholder="UPI ID (example@upi)" value={upiId} onChange={(e) => setUpiId(e.target.value)} className="w-full p-5 bg-zinc-50 border border-zinc-100 focus:border-black rounded-sm outline-none font-bold text-[11px] tracking-widest transition-all" />
+                        </div>
+                      )}
+
+                      {paymentMethod === "cod" && (
+                        <div className="p-5 bg-zinc-50 border border-zinc-100 text-[11px] text-zinc-500 font-medium">Cash on Delivery selected. Please keep exact change ready at delivery.</div>
+                      )}
+
+                      <div className="flex gap-3">
+                        <button onClick={() => setCheckoutStep("address")} className="w-full border border-zinc-200 py-5 font-display font-black uppercase text-[10px] tracking-widest hover:bg-zinc-50 transition-all">Back</button>
+                        <button onClick={handlePlaceOrder} className="w-full bg-black text-white py-5 font-display font-black uppercase text-[10px] tracking-widest hover:bg-zinc-800 transition-all">Place Order</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-zinc-50 p-10 md:p-12 lg:p-16 rounded-sm h-fit sticky top-24 border border-zinc-100">
@@ -1038,7 +1292,7 @@ export default function App() {
                          <span>{formatPrice(total)}</span>
                        </div>
                     </div>
-                   <button onClick={handlePlaceOrder} className="w-full bg-black text-white py-6 font-display font-bold uppercase text-[11px] tracking-widest hover:opacity-90 transition-all transition-transform active:scale-[0.98]">PLACE ORDER</button>
+                   <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">Complete all three steps to place order securely.</div>
                 </div>
               </div>
             </div>
@@ -1046,6 +1300,139 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function SizeChartDrawer({ isOpen, setIsOpen, product }: any) {
+  const getRows = () => {
+    if (!product) return [];
+
+    if (product.category === "footwear") {
+      return product.sizes.map((size: string) => {
+        const uk = Number(size);
+        const eu = Number.isFinite(uk) ? uk + 34 : "-";
+        const cm = Number.isFinite(uk) ? (uk + 23).toFixed(1) : "-";
+        return { size, chest: "-", waist: "-", inseam: "-", eu: `${eu}`, cm: `${cm}` };
+      });
+    }
+
+    if (product.category === "jeans") {
+      return product.sizes.map((size: string) => {
+        const waist = Number(size);
+        return {
+          size,
+          chest: "-",
+          waist: Number.isFinite(waist) ? `${waist} in` : "-",
+          inseam: Number.isFinite(waist) ? `${Math.max(28, waist - 2)} in` : "-",
+          eu: "-",
+          cm: "-",
+        };
+      });
+    }
+
+    const apparelGuide: Record<string, { chest: string; waist: string; inseam: string }> = {
+      XS: { chest: "34-36 in", waist: "28-30 in", inseam: "29 in" },
+      S: { chest: "36-38 in", waist: "30-32 in", inseam: "30 in" },
+      M: { chest: "38-40 in", waist: "32-34 in", inseam: "31 in" },
+      L: { chest: "40-42 in", waist: "34-36 in", inseam: "32 in" },
+      XL: { chest: "42-44 in", waist: "36-38 in", inseam: "33 in" },
+      XXL: { chest: "44-46 in", waist: "38-40 in", inseam: "34 in" },
+      "One Size": { chest: "Fits most", waist: "Fits most", inseam: "-" },
+    };
+
+    return product.sizes.map((size: string) => {
+      const guide = apparelGuide[size] || { chest: "Refer fit guide", waist: "Refer fit guide", inseam: "-" };
+      return { size, ...guide, eu: "-", cm: "-" };
+    });
+  };
+
+  const rows = getRows();
+
+  return (
+    <AnimatePresence>
+      {isOpen && product && (
+        <>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[500]" />
+          <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 28, stiffness: 260 }} className="fixed inset-x-0 bottom-0 md:inset-auto md:right-8 md:bottom-8 md:w-[760px] bg-white z-[510] p-6 md:p-8 shadow-2xl border border-zinc-100 rounded-t-xl md:rounded-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-xl font-display font-black uppercase tracking-tight">Size Chart</h3>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mt-1">{product.name}</p>
+              </div>
+              <button onClick={() => setIsOpen(false)} className="p-2 text-zinc-400 hover:text-black transition-all"><X size={22} strokeWidth={1.5} /></button>
+            </div>
+
+            <div className="overflow-x-auto border border-zinc-100 rounded-sm">
+              <table className="w-full text-left">
+                <thead className="bg-zinc-50">
+                  <tr className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                    <th className="px-4 py-3">Size</th>
+                    <th className="px-4 py-3">Chest</th>
+                    <th className="px-4 py-3">Waist</th>
+                    <th className="px-4 py-3">Inseam</th>
+                    <th className="px-4 py-3">EU</th>
+                    <th className="px-4 py-3">CM</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row: any) => (
+                    <tr key={row.size} className="border-t border-zinc-100 text-[11px] font-semibold text-zinc-600">
+                      <td className="px-4 py-3 font-black text-black">{row.size}</td>
+                      <td className="px-4 py-3">{row.chest}</td>
+                      <td className="px-4 py-3">{row.waist}</td>
+                      <td className="px-4 py-3">{row.inseam}</td>
+                      <td className="px-4 py-3">{row.eu}</td>
+                      <td className="px-4 py-3">{row.cm}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] font-medium text-zinc-500 mt-4">All measurements are approximate. For best fit, compare with a garment you already own.</p>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function ShippingReturnsDrawer({ isOpen, setIsOpen }: any) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[520]" />
+          <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="fixed top-0 right-0 h-full w-full max-w-xl bg-white z-[530] p-8 md:p-10 overflow-y-auto shadow-2xl">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-display font-black uppercase tracking-tight">Shipping & Returns</h3>
+              <button onClick={() => setIsOpen(false)} className="p-2 text-zinc-400 hover:text-black transition-all"><X size={24} strokeWidth={1.5} /></button>
+            </div>
+
+            <div className="space-y-8 text-zinc-600">
+              <section>
+                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-black mb-3">Shipping Policy</h4>
+                <p className="text-sm leading-relaxed">Orders are typically processed within 24 hours and delivered within 3-7 business days across India. Metro cities usually arrive faster. Tracking details are shared immediately after dispatch.</p>
+              </section>
+
+              <section>
+                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-black mb-3">Returns & Exchange</h4>
+                <p className="text-sm leading-relaxed">Returns or exchanges can be requested within 7 days of delivery for unused items with original tags and packaging. Refunds are initiated after quality checks and are usually reflected within 5-7 business days.</p>
+              </section>
+
+              <section>
+                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-black mb-3">Licensed Merchandise Notice</h4>
+                <p className="text-sm leading-relaxed">Products marked as licensed, limited edition, or collaboration drops are final sale unless the delivered item is damaged, defective, or incorrect. This policy helps protect inventory integrity for licensed releases.</p>
+              </section>
+
+              <section>
+                <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-black mb-3">Support</h4>
+                <p className="text-sm leading-relaxed">Need help with size, delivery, or returns? Contact support at help@core.in with your order ID for priority assistance.</p>
+              </section>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -1265,7 +1652,7 @@ function WishlistDrawer({ isWishlistOpen, setIsWishlistOpen, wishlist, toggleWis
                   {wishlistItems.map((product: any) => (
                     <div key={product.id} className="flex gap-6 group">
                       <div className="w-24 aspect-[4/5] overflow-hidden bg-zinc-50 rounded-sm flex-shrink-0">
-                        <ImageWithFallback src={product.image} className="w-full h-full object-cover" />
+                        <ImageWithFallback src={product.image} fallbackSrc={getCategoryFallbackImage(product.category)} className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-grow flex flex-col pt-1">
                         <div className="flex justify-between items-start">
@@ -1293,7 +1680,7 @@ function WishlistDrawer({ isWishlistOpen, setIsWishlistOpen, wishlist, toggleWis
   );
 }
 
-function CartDrawer({ isCartOpen, setIsCartOpen, cart, updateQuantity, subtotal, totalDiscount, total, setIsCheckout, formatPrice }: any) {
+function CartDrawer({ isCartOpen, setIsCartOpen, cart, updateQuantity, subtotal, totalDiscount, total, onCheckout, formatPrice }: any) {
   return (
     <AnimatePresence>
       {isCartOpen && (
@@ -1324,7 +1711,7 @@ function CartDrawer({ isCartOpen, setIsCartOpen, cart, updateQuantity, subtotal,
                   {cart.map((item: any) => (
                     <div key={item.id} className="flex gap-6 group">
                       <div className="w-24 aspect-[4/5] overflow-hidden bg-zinc-50 rounded-sm flex-shrink-0">
-                        <ImageWithFallback src={item.image} className="w-full h-full object-cover" />
+                        <ImageWithFallback src={item.image} fallbackSrc={getCategoryFallbackImage(item.category)} className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-grow flex flex-col pt-1">
                         <div className="flex justify-between items-start">
@@ -1367,7 +1754,7 @@ function CartDrawer({ isCartOpen, setIsCartOpen, cart, updateQuantity, subtotal,
                  </div>
                  
                  <button 
-                  onClick={() => { setIsCartOpen(false); setIsCheckout(true); }}
+                  onClick={() => { setIsCartOpen(false); onCheckout(); }}
                   className="w-full bg-black text-white py-5 font-display font-bold uppercase text-[11px] tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-4"
                  >
                    CHECKOUT <ArrowRight size={16} />

@@ -58,16 +58,16 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: "core-005",
-    name: "Street Pulse Sneakers",
-    price: 8999,
-    category: "footwear",
+    name: "Urban Utility Overshirt",
+    price: 2799,
+    category: "shirts",
     gender: "unisex",
-    image: "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?auto=format&fit=crop&q=80&w=800",
-    description: "Lightweight and comfortable sneakers designed for urban explorers.",
-    colors: ["#F59E0B", "#10B981", "#EF4444"],
-    sizes: ["7", "8", "9", "10"],
+    image: "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&q=80&w=800",
+    description: "Structured cotton overshirt with dual chest pockets. A practical everyday layer for work, travel, and evenings.",
+    colors: ["#4B5563", "#111827", "#E5E7EB"],
+    sizes: ["S", "M", "L", "XL"],
     reviews: [
-      { id: "r5", user: "Aman", rating: 5, comment: "Best sneakers under 10k." }
+      { id: "r5", user: "Aman", rating: 5, comment: "Perfect fit and looks clean with jeans." }
     ]
   },
   {
@@ -96,14 +96,14 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: "core-008",
-    name: "Retro Runner Shoes",
-    price: 6499,
-    category: "footwear",
+    name: "Washed Denim Jacket",
+    price: 4599,
+    category: "hoodies",
     gender: "unisex",
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=800",
-    description: "Classic retro design with modern cushioning technology.",
-    colors: ["#EF4444", "#FFFFFF"],
-    sizes: ["8", "9", "10"],
+    image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&q=80&w=800",
+    description: "Mid-weight washed denim jacket with relaxed shoulders and durable stitching for year-round wear.",
+    colors: ["#1E3A8A", "#334155"],
+    sizes: ["S", "M", "L", "XL"],
     reviews: []
   },
   {
@@ -183,15 +183,15 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: "core-w-004",
-    name: "Aero Platform Boots",
-    price: 6499,
+    name: "Pleated Wide-Leg Trousers",
+    price: 2899,
     originalPrice: 8999,
-    category: "footwear",
+    category: "jeans",
     gender: "women",
-    image: "https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?auto=format&fit=crop&q=80&w=800",
-    description: "Chunky platform boots with a technical techwear finish.",
-    colors: ["#000000", "#FFFFFF"],
-    sizes: ["5", "6", "7", "8"],
+    image: "https://images.unsplash.com/photo-1551854838-212c40b4c184?auto=format&fit=crop&q=80&w=800",
+    description: "Tailored pleated trousers with a wide-leg cut. Designed for a sharp office-to-evening silhouette.",
+    colors: ["#111827", "#D1D5DB"],
+    sizes: ["26", "28", "30", "32"],
     reviews: []
   },
   {
@@ -209,15 +209,15 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: "core-w-006",
-    name: "Pastel Wave Sneakers",
-    price: 4999,
+    name: "Cotton Poplin Shirt Dress",
+    price: 3199,
     originalPrice: 6999,
-    category: "footwear",
+    category: "shirts",
     gender: "women",
-    image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=800",
-    description: "Soft pastel colorway sneakers with high-rebound cushioning.",
-    colors: ["#FFB6C1", "#E0FFFF"],
-    sizes: ["6", "7", "8"],
+    image: "https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?auto=format&fit=crop&q=80&w=800",
+    description: "Breathable poplin shirt dress with a waist tie and clean collar details for all-day comfort.",
+    colors: ["#F3F4F6", "#93C5FD"],
+    sizes: ["XS", "S", "M", "L"],
     reviews: []
   },
   {
