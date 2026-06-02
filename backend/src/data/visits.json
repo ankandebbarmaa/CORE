@@ -5,7 +5,7 @@
     "country": "US",
     "device": "desktop",
     "source": "storefront",
-    "createdAt": "2026-05-26T11:33:40.427Z"
+    "createdAt": "2026-05-30T13:12:15.638Z"
   },
   {
     "sessionId": "sess-1779727393267-68817",
@@ -13,7 +13,7 @@
     "country": "US",
     "device": "desktop",
     "source": "storefront",
-    "createdAt": "2026-05-26T11:33:40.436Z"
+    "createdAt": "2026-05-30T13:12:16.460Z"
   },
   {
     "sessionId": "sess-1779727393267-68817",
@@ -21,54 +21,46 @@
     "country": "US",
     "device": "desktop",
     "source": "storefront",
-    "createdAt": "2026-05-26T11:34:25.277Z"
+    "createdAt": "2026-05-30T13:12:16.466Z"
   },
   {
-    "sessionId": "sess-1779803618502-45223",
+    "sessionId": "sess-1779727393267-68817",
     "state": "Calcutta",
     "country": "US",
     "device": "desktop",
     "source": "storefront",
-    "createdAt": "2026-05-26T13:53:38.522Z"
+    "createdAt": "2026-05-30T13:12:16.849Z"
   },
   {
-    "sessionId": "sess-1779803618502-45223",
+    "sessionId": "sess-1779727393267-68817",
     "state": "Calcutta",
     "country": "US",
     "device": "desktop",
     "source": "storefront",
-    "createdAt": "2026-05-26T13:53:38.527Z"
+    "createdAt": "2026-05-30T13:12:16.859Z"
   },
   {
-    "sessionId": "sess-1779803618502-45223",
+    "sessionId": "sess-1779727393267-68817",
     "state": "Calcutta",
     "country": "US",
     "device": "desktop",
     "source": "storefront",
-    "createdAt": "2026-05-26T13:54:54.446Z"
+    "createdAt": "2026-05-30T13:15:29.706Z"
   },
   {
-    "sessionId": "sess-1779803618502-45223",
+    "sessionId": "sess-1779727393267-68817",
     "state": "Calcutta",
     "country": "US",
     "device": "desktop",
     "source": "storefront",
-    "createdAt": "2026-05-26T13:55:08.730Z"
+    "createdAt": "2026-05-31T05:45:49.658Z"
   },
   {
-    "sessionId": "sess-1779803618502-45223",
+    "sessionId": "sess-1779727393267-68817",
     "state": "Calcutta",
     "country": "US",
     "device": "desktop",
     "source": "storefront",
-    "createdAt": "2026-05-26T13:55:58.314Z"
-  },
-  {
-    "sessionId": "sess-1779803618502-45223",
-    "state": "Calcutta",
-    "country": "US",
-    "device": "desktop",
-    "source": "storefront",
-    "createdAt": "2026-05-26T13:55:58.323Z"
+    "createdAt": "2026-05-31T05:45:49.687Z"
   }
 ]

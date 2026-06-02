@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import './App.css';
 
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:4000';
+
 interface Product {
   id: string;
   name: string;
@@ -173,10 +175,10 @@ function App() {
       const headers = { Authorization: token || '' };
 
       const [metricsRes, ordersRes, productsRes, analyticsRes] = await Promise.all([
-        fetch('http://localhost:4000/api/admin/metrics', { headers }),
-        fetch('http://localhost:4000/api/admin/orders', { headers }),
-        fetch('http://localhost:4000/api/products'),
-        fetch('http://localhost:4000/api/admin/analytics', { headers }),
+        fetch(`${API_BASE}/api/admin/metrics`, { headers }),
+        fetch(`${API_BASE}/api/admin/orders`, { headers }),
+        fetch(`${API_BASE}/api/products`),
+        fetch(`${API_BASE}/api/admin/analytics`, { headers }),
       ]);
 
       if (metricsRes.ok) {
@@ -209,7 +211,7 @@ function App() {
     setLoginLoading(true);
 
     try {
-      const res = await fetch('http://localhost:4000/api/auth/login', {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: 'admin', userId: adminId, password: adminPassword }),
@@ -240,7 +242,7 @@ function App() {
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/admin/orders/${orderId}/status`, {
+      const res = await fetch(`${API_BASE}/api/admin/orders/${orderId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -262,7 +264,7 @@ function App() {
     if (!confirm('Are you sure you want to remove this product from the database?')) return;
 
     try {
-      const res = await fetch(`http://localhost:4000/api/products/${productId}`, {
+      const res = await fetch(`${API_BASE}/api/products/${productId}`, {
         method: 'DELETE',
         headers: { Authorization: token || '' },
       });
@@ -334,7 +336,7 @@ function App() {
   const handleUploadImageToServer = async () => {
     if (!pImage) return;
     try {
-      const res = await fetch('http://localhost:4000/api/uploads/image', {
+      const res = await fetch(`${API_BASE}/api/uploads/image`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -383,8 +385,8 @@ function App() {
     };
 
     const url = selectedProduct
-      ? `http://localhost:4000/api/products/${pId}`
-      : 'http://localhost:4000/api/products';
+      ? `${API_BASE}/api/products/${pId}`
+      : `${API_BASE}/api/products`;
 
     const method = selectedProduct ? 'PUT' : 'POST';
 
