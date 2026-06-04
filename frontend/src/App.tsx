@@ -781,7 +781,7 @@ export default function App() {
         {/* Conditional Hero Section: Multi-Banner Layout */}
         {!isDeepBrowsing ? (
           <>
-            <section className="grid grid-cols-1 md:grid-cols-3 h-[90vh] md:h-[85vh] border-b border-zinc-100">
+            <section className="grid grid-cols-1 md:grid-cols-3 min-h-[72vh] md:h-[85vh] border-b border-zinc-100">
               <div className="relative overflow-hidden group cursor-pointer border-r border-zinc-100">
                 <ImageWithFallback src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&q=80&w=1200" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -847,7 +847,7 @@ export default function App() {
             </section>
 
             {/* Gender Section (Bonkers Corner Style) */}
-            <section className="grid grid-cols-1 md:grid-cols-2 h-[80vh] border-b border-zinc-100">
+            <section className="grid grid-cols-1 md:grid-cols-2 min-h-[72vh] md:h-[80vh] border-b border-zinc-100">
               <div 
                 onClick={() => { setActiveGender("men"); setActiveCategory("all"); setActiveMood(null); window.scrollTo(0, 0); }}
                 className="relative group cursor-pointer overflow-hidden border-r border-zinc-100"
@@ -897,7 +897,7 @@ export default function App() {
             {/* Featured Categories (Snitch Style) */}
             <section className="py-16 md:py-24 px-6 max-w-7xl mx-auto">
               <h2 className="text-center font-display font-black uppercase tracking-[0.3em] text-sm mb-16">Featured Categories</h2>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                   {[
                     { name: "SHIRTS", img: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&q=80&w=600", cat: "shirts" },
                     { name: "JEANS", img: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&q=80&w=600", cat: "jeans" },
@@ -919,7 +919,7 @@ export default function App() {
             <section className="bg-zinc-50 py-24 border-y border-zinc-100">
               <div className="max-w-7xl mx-auto px-6">
                 <h2 className="text-center font-display font-black uppercase tracking-[0.3em] text-sm mb-16">Match the Mood</h2>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-6">
                   {[
                     { title: "LUXURY", sub: "REFINED", img: "https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&q=80&w=600" },
                     { title: "BASICS", sub: "DAILY", img: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=600" },
@@ -1005,7 +1005,7 @@ export default function App() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 md:gap-x-8 gap-y-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-4 md:gap-x-8 gap-y-12">
             {filteredProducts.map((product, idx) => (
               <motion.div 
                 key={product.id} 
@@ -1110,7 +1110,7 @@ export default function App() {
       {/* Promotional Pop-up */}
       <AnimatePresence>
         {showPromoPopup && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-[300] flex items-end md:items-center justify-center p-3 sm:p-6">
             <motion.div 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
@@ -1122,13 +1122,13 @@ export default function App() {
               initial={{ scale: 0.95, opacity: 0 }} 
               animate={{ scale: 1, opacity: 1 }} 
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white w-full max-w-2xl relative rounded-sm overflow-hidden shadow-2xl flex flex-col md:flex-row"
+              className="bg-white w-full max-w-2xl relative rounded-t-2xl md:rounded-sm overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[calc(100vh-1.5rem)] md:max-h-[90vh] overflow-y-auto"
             >
-              <div className="md:w-1/2 aspect-[4/5] md:aspect-auto overflow-hidden bg-zinc-100">
+              <div className="md:w-1/2 aspect-[16/10] md:aspect-auto overflow-hidden bg-zinc-100">
                 <ImageWithFallback src="https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?auto=format&fit=crop&q=80&w=600" className="w-full h-full object-cover" alt="Model" />
               </div>
               
-              <div className="md:w-1/2 p-10 md:p-12 flex flex-col justify-center relative">
+              <div className="md:w-1/2 p-6 md:p-12 flex flex-col justify-center relative">
                 <button 
                   onClick={() => setShowPromoPopup(false)}
                   className="absolute top-6 right-6 p-2 text-zinc-300 hover:text-black transition-all"
@@ -1163,7 +1163,7 @@ export default function App() {
       
       <AnimatePresence>
         {isCheckout && (
-          <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="fixed inset-0 z-[200] bg-white overflow-y-auto p-6 md:p-12 lg:p-24 flex flex-col">
+          <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="fixed inset-0 z-[200] bg-white overflow-y-auto p-4 sm:p-6 md:p-12 lg:p-24 flex flex-col">
             <div className="max-w-7xl mx-auto w-full flex-grow">
               <button onClick={() => setIsCheckout(false)} className="flex items-center gap-2 font-display font-black text-[10px] tracking-widest mb-16 hover:opacity-50 transition-all uppercase">
                 <ArrowLeft size={16} />
@@ -1179,7 +1179,7 @@ export default function App() {
                 <span className={`${checkoutStep === "payment" ? "text-black" : "text-zinc-300"}`}>3. Payment</span>
               </div>
 
-              <div className="grid lg:grid-cols-2 gap-20 lg:gap-32">
+              <div className="grid lg:grid-cols-2 gap-10 lg:gap-32">
                 <div className="space-y-12">
                   {checkoutStep === "phone" && (
                     <div className="space-y-8">
@@ -1262,7 +1262,7 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="bg-zinc-50 p-10 md:p-12 lg:p-16 rounded-sm h-fit sticky top-24 border border-zinc-100">
+                <div className="bg-zinc-50 p-6 sm:p-8 md:p-12 lg:p-16 rounded-sm h-fit sticky top-24 border border-zinc-100">
                    <h3 className="font-display font-black uppercase tracking-[0.4em] text-[10px] mb-12">Order Summary</h3>
                    <div className="space-y-6 mb-12 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar font-bold uppercase text-[10px] tracking-widest">
                       {cart.map(item => (
@@ -1353,7 +1353,7 @@ function SizeChartDrawer({ isOpen, setIsOpen, product }: any) {
       {isOpen && product && (
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[500]" />
-          <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 28, stiffness: 260 }} className="fixed inset-x-0 bottom-0 md:inset-auto md:right-8 md:bottom-8 md:w-[760px] bg-white z-[510] p-6 md:p-8 shadow-2xl border border-zinc-100 rounded-t-xl md:rounded-xl max-h-[90vh] overflow-y-auto">
+            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 28, stiffness: 260 }} className="fixed inset-x-0 bottom-0 md:inset-auto md:right-8 md:bottom-8 md:w-[760px] bg-white z-[510] p-5 sm:p-6 md:p-8 shadow-2xl border border-zinc-100 rounded-t-2xl md:rounded-xl max-h-[92dvh] md:max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="text-xl font-display font-black uppercase tracking-tight">Size Chart</h3>
@@ -1402,7 +1402,7 @@ function ShippingReturnsDrawer({ isOpen, setIsOpen }: any) {
       {isOpen && (
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[520]" />
-          <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="fixed top-0 right-0 h-full w-full max-w-xl bg-white z-[530] p-8 md:p-10 overflow-y-auto shadow-2xl">
+          <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="fixed top-0 right-0 h-full w-full max-w-xl bg-white z-[530] p-5 sm:p-8 md:p-10 overflow-y-auto shadow-2xl">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-2xl font-display font-black uppercase tracking-tight">Shipping & Returns</h3>
               <button onClick={() => setIsOpen(false)} className="p-2 text-zinc-400 hover:text-black transition-all"><X size={24} strokeWidth={1.5} /></button>
@@ -1558,7 +1558,7 @@ function TrackOrderDrawer({ isOpen, setIsOpen, trackingId, setTrackingId, handle
               Enter your unique shipment signal to track your fulfillment in real-time.
             </p>
 
-            <form onSubmit={handleTrack} className="flex gap-2 mb-12">
+            <form onSubmit={handleTrack} className="flex flex-col sm:flex-row gap-2 mb-12">
               <input 
                 type="text" 
                 value={trackingId}
@@ -1566,7 +1566,7 @@ function TrackOrderDrawer({ isOpen, setIsOpen, trackingId, setTrackingId, handle
                 placeholder="ORDER ID (e.g. CR-5021)" 
                 className="flex-grow p-5 bg-zinc-50 border border-zinc-100 focus:border-black outline-none font-bold text-[11px] tracking-widest transition-all"
               />
-              <button className="bg-black text-white px-8 font-display font-black uppercase text-[10px] tracking-widest hover:bg-zinc-800 transition-all">
+              <button className="bg-black text-white px-8 py-4 sm:py-0 font-display font-black uppercase text-[10px] tracking-widest hover:bg-zinc-800 transition-all">
                 SIGNAL
               </button>
             </form>
@@ -1630,7 +1630,7 @@ function WishlistDrawer({ isWishlistOpen, setIsWishlistOpen, wishlist, toggleWis
       {isWishlistOpen && (
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsWishlistOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[250]" />
-          <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[260] p-8 md:p-12 flex flex-col shadow-2xl">
+          <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[260] p-5 sm:p-8 md:p-12 flex flex-col shadow-2xl">
             <div className="flex justify-between items-center mb-12">
               <div>
                 <h3 className="text-2xl font-display font-black tracking-tight uppercase">Wishlist</h3>
@@ -1650,8 +1650,8 @@ function WishlistDrawer({ isWishlistOpen, setIsWishlistOpen, wishlist, toggleWis
               ) : (
                 <div className="space-y-8">
                   {wishlistItems.map((product: any) => (
-                    <div key={product.id} className="flex gap-6 group">
-                      <div className="w-24 aspect-[4/5] overflow-hidden bg-zinc-50 rounded-sm flex-shrink-0">
+                    <div key={product.id} className="flex flex-col sm:flex-row gap-4 sm:gap-6 group">
+                      <div className="w-full sm:w-24 aspect-[4/5] overflow-hidden bg-zinc-50 rounded-sm flex-shrink-0">
                         <ImageWithFallback src={product.image} fallbackSrc={getCategoryFallbackImage(product.category)} className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-grow flex flex-col pt-1">
@@ -1686,7 +1686,7 @@ function CartDrawer({ isCartOpen, setIsCartOpen, cart, updateQuantity, subtotal,
       {isCartOpen && (
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCartOpen(false)} className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[150]" />
-          <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[160] p-8 md:p-12 flex flex-col shadow-2xl">
+          <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 300 }} className="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[160] p-5 sm:p-8 md:p-12 flex flex-col shadow-2xl">
             <div className="flex justify-between items-center mb-12">
               <div>
                 <h3 className="text-2xl font-display font-black tracking-tight uppercase">Your Bag</h3>
@@ -1709,8 +1709,8 @@ function CartDrawer({ isCartOpen, setIsCartOpen, cart, updateQuantity, subtotal,
               ) : (
                 <div className="space-y-8">
                   {cart.map((item: any) => (
-                    <div key={item.id} className="flex gap-6 group">
-                      <div className="w-24 aspect-[4/5] overflow-hidden bg-zinc-50 rounded-sm flex-shrink-0">
+                    <div key={item.id} className="flex flex-col sm:flex-row gap-4 sm:gap-6 group">
+                      <div className="w-full sm:w-24 aspect-[4/5] overflow-hidden bg-zinc-50 rounded-sm flex-shrink-0">
                         <ImageWithFallback src={item.image} fallbackSrc={getCategoryFallbackImage(item.category)} className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-grow flex flex-col pt-1">

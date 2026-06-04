@@ -598,7 +598,7 @@ function App() {
                       <tbody>
                         {orders.slice(0, 6).map(order => (
                           <tr key={order.id}>
-                            <td style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{order.id}</td>
+                            <td style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#111111' }}>{order.id}</td>
                             <td>{order.shippingDetails.name}</td>
                             <td>{formatPrice(order.total)}</td>
                             <td>
@@ -885,7 +885,7 @@ function App() {
                   <tbody>
                     {orders.map(order => (
                       <tr key={order.id}>
-                        <td style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{order.id}</td>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 'bold', color: '#111111' }}>{order.id}</td>
                         <td>
                           <div>{order.shippingDetails.name}</div>
                           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{order.shippingDetails.email}</div>
@@ -938,7 +938,7 @@ function App() {
         <div className="modal-overlay" onClick={() => setIsOrderModalOpen(false)}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h4>Order Breakdown: {selectedOrder.id}</h4>
+              <h4>Order Breakdown: <span style={{ color: '#111111' }}>{selectedOrder.id}</span></h4>
               <button className="modal-close" onClick={() => setIsOrderModalOpen(false)}>
                 <X size={20} />
               </button>
