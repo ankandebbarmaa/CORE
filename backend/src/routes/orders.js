@@ -67,4 +67,50 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Fetch orders by phone number
+router.get('/phone/:phone', async (req, res) => {
+  try {
+    const { phone } = req.params;
+    const orders = await readOrders();
+    const userOrders = orders.filter(
+      order => order?.shippingDetails?.phone === phone
+    );
+    // Sort by newest first
+    userOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json(userOrders);
+  } catch (error) {
+    console.error('Failed to fetch user orders:', error);
+    res.status(500).json({ message: 'Failed to fetch user orders' });
+  }
+});
+
+// Cancel order by user
+router.put('/:id/cancel', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const orders = await readOrders();
+    const index = orders.findIndex(order => order.id === id);
+    if (index === -1) return res.status(404).json({ message: 'Order not found' });
+
+    const order = orders[index];
+    if (order.status !== 'Placed') {
+      return res.status(400).json({ message: 'Only placed orders can be cancelled' });
+    }
+
+    order.status = 'Cancelled';
+    order.location = 'CANCELLED';
+    order.steps = order.steps.map(step => {
+      if (step.title === 'ORDER PLACED') return { ...step, done: true };
+      return { ...step, done: false, date: '-' };
+    });
+
+    orders[index] = order;
+    await writeOrders(orders);
+    res.json(order);
+  } catch (error) {
+    console.error('Failed to cancel order:', error);
+    res.status(500).json({ message: 'Failed to cancel order' });
+  }
+});
+
 module.exports = router;

@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const Product = require('./models/Product');
 const Order = require('./models/Order');
 const Visit = require('./models/Visit');
+const Category = require('./models/Category');
+const Payment = require('./models/Payment');
 
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/core';
 const PRODUCTS_FILE = path.join(__dirname, 'data', 'products.json');
@@ -44,9 +46,13 @@ const readSeedFile = async (fileName) => {
   return JSON.parse(content || '[]');
 };
 
-const seedCollection = async (Model, fileName) => {
-  const count = await Model.countDocuments();
-  if (count > 0) return;
+const seedCollection = async (Model, fileName, force = false) => {
+  if (force) {
+    await Model.deleteMany({});
+  } else {
+    const count = await Model.countDocuments();
+    if (count > 0) return;
+  }
 
   const records = await readSeedFile(fileName);
   if (records.length > 0) {
@@ -59,8 +65,8 @@ const initializeDatabase = async () => {
     await connectDatabase();
     storageMode = 'mongo';
     await Promise.all([
-      seedCollection(Product, 'products.json'),
-      seedCollection(Order, 'orders.json'),
+      seedCollection(Product, 'products.json', true),
+      seedCollection(Order, 'orders.json', false),
     ]);
   } catch (error) {
     storageMode = 'file';

@@ -28,6 +28,26 @@ const normalizeProductPayload = async (payload, existingProduct = {}) => {
   normalized.collection = formatLabel(normalized.collection, existingProduct.collection || 'core essentials');
   normalized.isNewArrival = Boolean(normalized.isNewArrival ?? existingProduct.isNewArrival);
 
+  // Normalize Shopify-grade details
+  if (normalized.compareAtPrice !== undefined && normalized.compareAtPrice !== null && normalized.compareAtPrice !== '') {
+    normalized.compareAtPrice = normalizeNumber(normalized.compareAtPrice);
+  }
+  if (normalized.costPerItem !== undefined && normalized.costPerItem !== null && normalized.costPerItem !== '') {
+    normalized.costPerItem = normalizeNumber(normalized.costPerItem);
+  }
+  normalized.chargeTax = normalized.chargeTax !== undefined ? Boolean(normalized.chargeTax) : (existingProduct.chargeTax ?? true);
+  normalized.sku = formatLabel(normalized.sku, existingProduct.sku || '');
+  normalized.barcode = formatLabel(normalized.barcode, existingProduct.barcode || '');
+  normalized.trackInventory = normalized.trackInventory !== undefined ? Boolean(normalized.trackInventory) : (existingProduct.trackInventory ?? true);
+  normalized.quantity = normalized.quantity !== undefined ? normalizeNumber(normalized.quantity) : (existingProduct.quantity ?? 0);
+  normalized.weight = normalized.weight !== undefined ? normalizeNumber(normalized.weight) : (existingProduct.weight ?? 0);
+  normalized.weightUnit = formatLabel(normalized.weightUnit, existingProduct.weightUnit || 'kg');
+  normalized.vendor = formatLabel(normalized.vendor, existingProduct.vendor || '');
+  normalized.productType = formatLabel(normalized.productType, existingProduct.productType || '');
+  normalized.tags = normalizeArray(normalized.tags);
+  normalized.seoTitle = formatLabel(normalized.seoTitle, existingProduct.seoTitle || '');
+  normalized.seoDescription = formatLabel(normalized.seoDescription, existingProduct.seoDescription || '');
+
   const candidateImage = normalized.image || (Array.isArray(normalized.images) && normalized.images[0]) || existingProduct.image || '';
   if (candidateImage) {
     const uploadedImage = await uploadImage(candidateImage, { folder: 'core/products' });

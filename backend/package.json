@@ -3,11 +3,11 @@
   "private": true,
   "version": "1.0.0",
   "description": "Express API for the CORE ecommerce platform",
-  "main": "src/server.js",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
-    "check": "node --check src/server.js"
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js",
+    "check": "node --check src/app.js"
   },
   "keywords": [],
   "author": "",

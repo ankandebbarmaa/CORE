@@ -79,4 +79,44 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
   }
 });
 
+// Submit a review for a product
+router.post('/:id/reviews', async (req, res) => {
+  try {
+    const { user, rating, comment } = req.body ?? {};
+
+    if (!user || rating === undefined || !comment) {
+      return res.status(400).json({ message: 'Missing required review fields' });
+    }
+
+    const numericRating = Number(rating);
+    if (isNaN(numericRating) || numericRating < 1 || numericRating > 5) {
+      return res.status(400).json({ message: 'Rating must be a number between 1 and 5' });
+    }
+
+    const products = await readProducts();
+    const index = products.findIndex(p => p.id === req.params.id);
+
+    if (index === -1) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    const newReview = {
+      id: `rev-${Math.floor(1000 + Math.random() * 9000)}`,
+      user: String(user).trim(),
+      rating: numericRating,
+      comment: String(comment).trim(),
+    };
+
+    products[index].reviews = products[index].reviews || [];
+    products[index].reviews.push(newReview);
+
+    await writeProducts(products);
+
+    res.status(201).json(newReview);
+  } catch (error) {
+    console.error('Failed to add product review:', error);
+    res.status(500).json({ message: 'Failed to add product review' });
+  }
+});
+
 module.exports = router;
